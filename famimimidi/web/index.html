@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ja" data-theme="rpg">
+<head>
+<meta charset="utf-8">
+<title>FAMIMIMIDI SOUND EDITOR</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="icon.png">
+</head>
+<body>
+<div class="app">
+  <!-- 上の帯 -->
+  <div class="top win">
+    <span class="logo"><img src="icon.png" alt="">FAMIMIMIDI SOUND EDITOR</span>
+    <span class="status ng" id="status">未接続</span>
+    <span class="spacer"></span>
+    <button class="btn" id="btnWave">波形メモリ</button>
+    <button class="btn" id="btnAB">A/B 比較</button>
+    <button class="btn" id="btnExport">MIDI書き出し</button>
+    <button class="btn main" id="btnCart">★ カートリッジ</button>
+    <button class="btn" id="btnSettings">⚙ 接続と設定</button>
+    <button class="btn danger" id="btnPanic" title="鳴っている音を全部止める(CC#123 → CC#120)">パニック</button>
+  </div>
+
+  <!-- 左: ライブラリ(C3 で作る) -->
+  <div class="win side">
+    <h2>▼ ライブラリ<span class="help" data-tip="このパソコンに保存した一覧です。ダブルクリックで読み込んで送ります。&#10;・音色: 1つの ch の音色&#10;・演奏セット: 5つの ch の音色と、鍵盤の割り当て表をまとめたもの(読み込むと全部の ch の音色と割り当てが切り替わります)&#10;★ はカートリッジ(ファミコン側)に保存する画面を開きます。">?</span></h2>
+    <div class="seg libkind" id="libKind"><button data-k="patch" class="on">音色</button><button data-k="set">演奏セット</button></div>
+    <input type="text" id="libSearch" class="search" placeholder="🔍 さがす">
+    <ul class="list" id="libList"></ul>
+    <div class="libbtns">
+      <button class="btn" id="libLoad">読み込む</button><button class="btn" id="libNew">新規保存…</button>
+      <button class="btn" id="libOver">上書き保存</button><button class="btn" id="libMeta">名前・メモ…</button>
+      <button class="btn" id="libDel">削除</button><button class="btn main" id="libCart">★ カートリッジへ…</button>
+      <button class="btn" id="libBackup" title="ライブラリをファイルに書き出す">バックアップ…</button><button class="btn" id="libRestore" title="バックアップから音色を取り込む(同じものがあっても上書きしない)">取り込み…</button>
+    </div>
+    <div class="libinfo note" id="libInfo"></div>
+  </div>
+
+  <!-- 中央 -->
+  <div class="main">
+    <div class="tabs" id="tabs"></div>
+
+    <!-- 音色エディタ -->
+    <div class="win toolbar">
+      <span class="loaded" id="loaded">音色: (なし)</span>
+      <span class="spacer"></span>
+      <label class="note">おまかせ</label>
+      <select id="presetSel"></select>
+      <button class="btn" id="btnPreset">この音にする</button>
+      <span class="sep"></span>
+      <div class="seg" id="viewSeg"><button data-v="easy">かんたん</button><button data-v="detail">詳細</button></div>
+      <button class="btn" id="btnSendAll" title="画面の値を全部送り直す(カートリッジの状態は読めないので、ずれたときに)">全部送る</button>
+      <button class="btn" id="btnReset" title="全部の項目を電源ON時の値に戻して送る">既定値に戻す</button>
+    </div>
+    <div class="presetDesc note" id="presetDesc"></div>
+    <div id="easyView" class="easy"></div>
+    <div id="detailView" class="win detail" style="display:none"></div>
+  </div>
+
+  <!-- 接続と設定(⚙ で開閉) -->
+  <div class="drawer" id="drawer">
+    <div class="win" id="settingsPanel">
+      <span class="close" id="btnCloseDrawer" title="閉じる">✕</span>
+      <h2>接続と設定<span class="help" data-tip="ふぁみみみっでぃにつないだ USB-MIDI を「出力」に、鍵盤(KROSS2 や microKEY2)を「入力」に選んで「接続」を押します。&#10;Domino や Cubase が同じポートを使っていると接続できません。">?</span></h2>
+      <div class="field"><label>出力(ふぁみみみっでぃ側)</label>
+        <div class="inline"><select id="outSel"></select><button class="btn" id="btnRefresh">一覧を更新</button></div></div>
+      <div class="field"><label>入力(鍵盤)</label><div><select id="inSel"></select></div></div>
+      <div class="field"><label></label><div class="inline">
+        <button class="btn main" id="btnConnect">接続</button><button class="btn" id="btnDisconnect">切断</button></div></div>
+      <div class="field"><label>MIDIスルー<span class="help" data-tip="鍵盤の演奏を、そのままふぁみみみっでぃへ流します。">?</span></label>
+        <div class="inline"><label class="check"><input type="checkbox" id="thru"> 入力の演奏を出力へ流す</label></div></div>
+      <div class="field"><label>鍵盤の弾き方<span class="help" data-tip="外部の鍵盤(microKEY2 など)の演奏を、どの ch で鳴らすかです。&#10;・開いているタブのch: 音色づくりのとき&#10;・割り当て表: 下の表のとおりに ch へ振り分けます(ベース+メロディ、2音、重ねる など)。演奏セットを読み込むとこれになります">?</span></label>
+        <div class="radios" id="playMode">
+          <label><input type="radio" name="pmode" value="tab"> 開いているタブのchで鳴らす</label>
+          <label><input type="radio" name="pmode" value="map"> 割り当て表で鳴らす</label>
+          <label><input type="radio" name="pmode" value="through"> 鍵盤が送ってきたchのまま</label></div></div>
+      <div class="field"><label>割り当て表<span class="help" data-tip="ch ごとに、鳴らす鍵盤の範囲(鍵域)を決めます。1つの鍵は、鍵域に入るすべての ch で鳴ります。&#10;鍵域をずらせば鍵盤を分けられ、重ねれば同時に鳴ります。&#10;ふぁみみみっでぃは1つの ch で1音しか出せないので、和音を弾くなら「ch1 と ch2」を「2音」にします。&#10;「ホイール」に印のある ch には、ピッチベンドやモジュレーションも送ります。&#10;この表はカートリッジには保存できません(アプリが振り分けます)。演奏セットに保存できます">?</span></label>
+        <div class="inline"><span class="note">ひな形</span><select id="playTpl"></select>
+          <span class="note">ch1 と ch2</span><select id="playPair"><option value="off">別々</option><option value="poly">2音(和音)</option><option value="layer">重ねる</option></select></div></div>
+      <table class="maptable" id="mapTable"></table>
+      <div class="field" id="layerRow"><label>重ねるときのずれ</label>
+        <div class="inline"><select id="layerDetune" title="ずらす量。大きいほどうねりが速くなります"><option value="8">少し</option><option value="16">普通</option><option value="24">強め</option></select><button class="btn" id="btnLayerCopy" title="ch2 の音色を ch1 と同じにして、ch2 だけ音程をほんの少し上にずらします(デチューン)。&#10;2つの音がわずかにずれて、うねりのある厚い音になります。&#10;ファミコンの音程は段階でしか作れないので、「少し」だと音によってはずれが丸められて、うねらないことがあります">ch1 の音色を ch2 にコピーしてずらす</button></div></div>
+      <div class="field"><label>音源のチャンネル<span class="help" data-tip="ファミコンの電源を入れるときに、コントローラーの B を押していると ch6〜10、A+B で ch11〜15 になります。">?</span></label>
+        <div class="radios" id="offsets"></div></div>
+      <div class="field"><label>見た目(テーマ)</label><div class="radios" id="themes"></div></div>
+    </div>
+  </div>
+
+  <!-- 下: 鍵盤とログ -->
+  <div class="bottom">
+    <div class="win kbwrap">
+      <div class="kbbar">
+        <button class="btn" id="playChip"></button><span class="spacer"></span>
+        <select id="phraseSel" style="max-width:150px" title="テストフレーズ(鍵盤の一番左の C が基準)"></select>
+        <button class="btn" id="btnPhrase">▶</button><button class="btn" id="btnPhraseStop">■</button>
+        <label class="note" title="鍵盤とフレーズの強さ(ベロシティ)。ch1・2・4 は16段階なので、7以下は一番下の段(無音)になるため 8 からにしています">強さ</label><input type="range" id="velRange" min="8" max="127" value="100" style="width:70px"><span class="note" id="velNum">100</span>
+        <button class="btn" id="octDown" title="画面の鍵盤を1オクターブ下へ">◀ 低く</button><button class="btn" id="octUp" title="画面の鍵盤を1オクターブ上へ">高く ▶</button>
+      </div>
+      <div class="kb" id="kb"></div>
+    </div>
+    <div class="win logwrap">
+      <h2>送信ログ<span class="help" data-tip="送ったものは全部ここと logs/ フォルダに残ります。赤い行は送らなかった(遮断した)もの。">?</span>
+        <span style="float:right"><button class="btn" id="btnCopyLog">コピー</button> <button class="btn" id="btnClearLog" title="画面のログだけを消す(ファイルには残る)">消去</button> <button class="btn" id="btnLogDir">フォルダ</button></span></h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+<!-- カートリッジ(保存場所)の画面 -->
+<div class="overlay" id="cartPage">
+  <div class="win cartwin">
+    <span class="close" id="cartClose" title="閉じる">✕</span>
+    <h2>★ カートリッジ(ファミコン側に保存)<span class="help" data-tip="ふぁみみみっでぃには、音色をしまっておける「保存場所」が40か所あります。&#10;しまった音色は、鍵盤やこのソフトから、その場所の「呼び出し番号」を送ると呼び出せます。電源を切っても消えません。">?</span></h2>
+    <div class="cartbody">
+      <div class="tiles" id="tiles"></div>
+      <div class="cartside">
+        <div class="placehead" id="placeHead"></div>
+        <div class="note" id="placeName"></div>
+        <div class="field2"><label>鳴らすch</label><select id="tryCh"></select><button class="btn" id="btnTry">♪ 呼び出して鳴らす</button></div>
+        <div class="field2"><label>入れる音色</label><select id="putSel"></select></div>
+        <div class="inline"><button class="btn main" id="btnPut">ここに入れる…</button><button class="btn" id="btnClear">この場所を空にする…</button></div>
+        <div class="note" style="margin-top:8px">保存したら、ファミコンの電源を入れ直してから「呼び出して鳴らす」で確かめてください。</div>
+        <button class="btn" id="btnExpert" style="margin-top:14px">詳細な管理…</button>
+      </div>
+    </div>
+    <div class="cartrows">
+      <div><h2>電源を入れたときの音色<span class="help" data-tip="電源を入れた直後の、各チャンネルの音色です。音色の入った場所から選びます。">?</span></h2><div id="startupRows"></div></div>
+      <div><h2>音色の切り替えを整える<span class="help" data-tip="1か所に入るのは10項目までなので、呼び出したときに前の音色の設定が残ることがあります。&#10;「整える」を押すと、同じチャンネルの音色どうしで切り替えても設定が残らないように保存し直し、どの音色にも共通の設定は「土台」として、電源を入れたときに自動で入るようにします。">?</span></h2><div id="tidyRows"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 波形メモリ(ch5) -->
+<div class="overlay" id="wavePage">
+  <div class="win toolwin">
+    <span class="close" data-close="wavePage">✕</span>
+    <h2>波形メモリ(ch5)<span class="help" data-tip="ch5 の「波形メモリ」で鳴らす音の形を描きます。16本の棒をなぞって描いてください(上ほど大きい)。&#10;「鳴らす」はカートリッジに保存しません。「登録…」で PC61〜76 に保存すると、電源を切っても残ります。">?</span></h2>
+    <div class="wavebody">
+      <svg id="waveSvg" viewBox="0 0 384 384"></svg>
+      <div>
+        <div class="presets" id="wavePresets"></div>
+        <div class="note" id="waveVals"></div>
+        <div class="field2"><label>高さ</label><select id="wavePitch"><option value="48">低い(ド3)</option><option value="60" selected>ふつう(ド4)</option><option value="72">高い(ド5)</option></select>
+          <button class="btn" id="wavePlay">♪ 鳴らす</button></div>
+        <button class="btn" id="waveDrum">ch5 をドラムに戻す</button>
+        <h2 class="subh">カートリッジに登録(保存)</h2>
+        <div class="field2"><label>名前</label><input type="text" id="waveName" value="三角"></div>
+        <div class="field2"><label>登録先</label><select id="waveSlot"></select></div>
+        <div class="inline"><button class="btn main" id="waveReg">登録…</button><button class="btn" id="waveRecall">登録したものを鳴らす</button><button class="btn" id="waveLoad">編集に読み込む</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A/B 比較 -->
+<div class="overlay" id="abPage">
+  <div class="win toolwin">
+    <span class="close" data-close="abPage">✕</span>
+    <h2>音色を比べる(A/B)<span class="help" data-tip="2つの音色を交互に鳴らします。鳴らす前に毎回その音色の全項目を送り直すので、前の音色の設定は残りません。&#10;下の表は違う設定(上ほど音への影響が大きい)。灰色は、どちらの音色でも効いていないので音は変わらない設定です。">?</span></h2>
+    <div class="field2"><label class="abA">A</label><select id="abA"></select><button class="btn" id="abPlayA">♪ A</button></div>
+    <div class="field2"><label class="abB">B</label><select id="abB"></select><button class="btn" id="abPlayB">♪ B</button></div>
+    <div class="inline"><select id="abPhrase"></select><button class="btn main" id="abAlt">A → B → A → B と交互に鳴らす</button><button class="btn" id="abStop">止める</button><span class="abnow" id="abNow"></span></div>
+    <div class="note" id="abNote"></div>
+    <table class="abtable"><thead><tr><th>違う設定</th><th class="abA">A</th><th class="abB">B</th></tr></thead><tbody id="abRows"></tbody></table>
+  </div>
+</div>
+
+<!-- MIDI 書き出し -->
+<div class="overlay" id="exportPage">
+  <div class="win toolwin narrow">
+    <span class="close" data-close="exportPage">✕</span>
+    <h2>MIDIファイルに書き出す<span class="help" data-tip="音色の設定を MIDI ファイル(.mid)にします。Cubase などで曲の頭(1小節目の前)に置くと、再生したときにその音色になります。チャンネルごとに別のトラックになります。">?</span></h2>
+    <div id="exportRows"></div>
+    <h2 class="subh">書き方</h2>
+    <div id="exportModes"></div>
+    <div class="btns"><button class="btn main" id="exportGo">書き出す…</button></div>
+  </div>
+</div>
+
+<!-- 詳細な管理(上級者向け) -->
+<div class="overlay" id="expertPage">
+  <div class="win toolwin wide2">
+    <span class="close" data-close="expertPage">✕</span>
+    <h2>詳細な管理<span class="help" data-tip="上級者向けの画面です。ここでは内部の言葉を使います。&#10;PC(プログラムチェンジ)= 呼び出し番号。PC89〜128 が保存場所1〜40。&#10;マクロ = カートリッジの中の、設定を最大10項目まで記録しておける入れ物(1〜40)。PC にマクロを割り当てると、その PC で呼び出せる。">?</span></h2>
+    <div class="seg" id="exTabs"><button data-t="check" class="on">1つずつ試す</button><button data-t="bulk">まとめて割り当て</button><button data-t="adv">くわしく設定して入れる</button><button data-t="tables">内部の対応表</button></div>
+
+    <div class="extab" id="ex-check">
+      <p class="note">毎回、音量を戻してから PC を送り、ch1 で1音鳴らします。聴いて「鳴った/無音」を押すと、ログに残して次へ進みます(書き込みではありません)。</p>
+      <div class="inline"><span class="bigpc" id="chkPc"></span><button class="btn" id="chkPrev">◀</button><button class="btn" id="chkNext">▶</button>
+        <button class="btn" id="chkPlay">♪ 鳴らす</button><button class="btn main" id="chkOk">鳴った → 次</button><button class="btn danger" id="chkNg">無音 → 次</button></div>
+      <div class="note" id="chkLabel"></div>
+      <div id="chkSummary" style="margin-top:8px"></div>
+      <button class="btn" id="chkToBulk" style="margin-top:8px">無音だった PC を「まとめて割り当て」で選ぶ</button>
+    </div>
+
+    <div class="extab" id="ex-bulk" style="display:none">
+      <p class="note">PC を選び(クリックで選択/解除)、マクロを選んで「予定に追加」。何組でも追加でき、確認は最後に1回です。</p>
+      <div class="pcgrid" id="bulkGrid"></div>
+      <div class="inline" style="margin-top:8px"><label>マクロ</label><select id="bulkMacro"></select><button class="btn" id="bulkAdd">予定に追加 →</button>
+        <button class="btn" id="bulkClearSel">選択を外す</button></div>
+      <div id="bulkPlan" class="note" style="margin-top:8px"></div>
+      <div class="btns"><button class="btn" id="bulkReset">予定を消す</button><button class="btn main" id="bulkGo">内容を確認して割り当てる…</button></div>
+    </div>
+
+    <div class="extab" id="ex-adv" style="display:none">
+      <div class="field2"><label>音色</label><select id="advPatch"></select></div>
+      <div class="field2"><label>PC</label><select id="advPc"></select></div>
+      <div class="field2"><label>電源ON</label><select id="advStartup"><option value="">(しない)</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <div class="field2"><label>マクロ</label><select id="advMacro"></select></div>
+      <p class="note">上から10項目だけが記録されます(11項目目以降は灰色)。↑↓で並べ替え、✕で外します。最初の並びは、ほかの音色から切り替えても残らないように自動で選んだ順です。</p>
+      <table class="abtable" id="advRows"></table>
+      <div class="btns"><button class="btn main" id="advGo">内容を確認して書き込む…</button></div>
+    </div>
+
+    <div class="extab" id="ex-tables" style="display:none">
+      <div class="inline"><label>PC を送る(書き込みではない): ch</label><select id="sendCh"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+        <label>PC</label><input type="text" id="sendPc" value="89" size="4"><button class="btn" id="sendGo">送信</button><span class="note" id="sendLabel"></span></div>
+      <h2 class="subh">記録済みのマクロを割り当てる(マクロの中身は変えない)</h2>
+      <div class="inline"><label>マクロ</label><select id="asgMacro"></select>
+        <label>PC</label><select id="asgPc"></select><label>電源ON</label>
+        <select id="asgStartup"><option value="">(しない)</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+        <button class="btn main" id="asgGo">内容を確認して割り当てる…</button></div>
+      <div class="tables2">
+        <div><h2 class="subh">マクロ 1〜40</h2><table class="abtable" id="tblMacros"></table></div>
+        <div><h2 class="subh">PC 89〜128</h2><table class="abtable" id="tblPcs"></table><h2 class="subh">電源ONマクロ</h2><div id="tblStartup"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 確認ダイアログ・入力ダイアログ -->
+<div class="overlay" id="modal"><div class="win modalwin" id="modalBox"></div></div>
+
+<!-- 書き込み中(閉じられない) -->
+<div class="overlay" id="writing">
+  <div class="win writewin">
+    <h2 class="danger">⚠ カートリッジに書き込み中です</h2>
+    <div>終わるまで、次のことをしないでください。<br>・ファミコンの電源を切る/リセットボタンを押す<br>・USBケーブルやMIDIケーブルを抜く<br>・このソフトを閉じる</div>
+    <div class="bar"><div id="writeBar"></div></div>
+    <div id="writeLeft"></div><div class="note" id="writeStep"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+<script src="editor.js"></script>
+<script src="library.js"></script>
+<script src="tools.js"></script>
+<script src="expert.js"></script>
+</body>
+</html>

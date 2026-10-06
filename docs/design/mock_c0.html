@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ja" data-theme="rpg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAMIMIMIDI 画面の試作(C0)</title>
+<style>
+/* ---- 3つのテーマ(色だけが違う。部品の並びは共通) ---- */
+:root, [data-theme="rpg"] {           /* A: RPG のウィンドウ風(黒地に白枠) */
+  --bg: #000; --panel: #000; --ink: #fcfcfc; --sub: #a4a4a4; --line: #fcfcfc;
+  --accent: #f8b800; --accent2: #3cbcfc; --danger: #d82800; --ok: #58d854;
+  --graph: #0000bc; --key: #fcfcfc; --keyb: #000; --frame: double 6px var(--line); --radius: 10px;
+}
+[data-theme="console"] {              /* B: ファミコン本体の配色(えんじ+白+金)に、黒い「画面」 */
+  --bg: #e8dcc0; --panel: #1c1c1c; --ink: #f8f8f8; --sub: #b8b0a0; --line: #8c1c18;
+  --accent: #d8a038; --accent2: #f8f8f8; --danger: #8c1c18; --ok: #6cc86c;
+  --graph: #2a2a2a; --key: #f8f8f8; --keyb: #1c1c1c; --frame: solid 6px var(--line); --radius: 6px;
+}
+[data-theme="crt"] {                  /* C: ブラウン管風(走査線+ネオン) */
+  --bg: #07070d; --panel: #0d0d18; --ink: #d8f8ff; --sub: #6c8898; --line: #3cbcfc;
+  --accent: #fc74b4; --accent2: #3cbcfc; --danger: #f83800; --ok: #b8f818;
+  --graph: #06101c; --key: #d8f8ff; --keyb: #07070d; --frame: solid 2px var(--line); --radius: 4px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 "MS Gothic", "Osaka-Mono", monospace;
+       letter-spacing: .5px; }
+[data-theme="crt"] body::after { content: ""; position: fixed; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px); }
+[data-theme="crt"] .win { box-shadow: 0 0 12px rgba(60,188,252,.35); }
+
+.switch { position: fixed; right: 12px; bottom: 12px; z-index: 10; background: #222; color: #fff; padding: 6px 8px;
+          border-radius: 6px; font-size: 12px; }
+.switch button { font: inherit; margin-left: 4px; cursor: pointer; }
+
+.app { display: grid; grid-template-columns: 250px 1fr; grid-template-rows: auto 1fr auto; gap: 12px;
+       height: 100vh; padding: 12px; }
+.win { background: var(--panel); border: var(--frame); border-radius: var(--radius); padding: 10px 14px; position: relative; }
+.win > h2 { margin: -2px 0 8px; font-size: 13px; color: var(--accent); letter-spacing: 2px; }
+
+/* 上の帯 */
+.top { grid-column: 1 / 3; display: flex; align-items: center; gap: 16px; }
+.logo { font-size: 18px; color: var(--accent); letter-spacing: 3px; }
+.status { color: var(--ok); }
+.status::before { content: "●"; margin-right: 6px; }
+.spacer { flex: 1; }
+.btn { background: transparent; color: var(--ink); border: 2px solid var(--line); border-radius: 4px; padding: 5px 12px;
+       font: inherit; cursor: pointer; }
+.btn:hover { background: var(--line); color: var(--panel); }
+.btn.main { background: var(--accent); color: #000; border-color: var(--accent); }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* 左: ライブラリ */
+.lib ul { list-style: none; margin: 0; padding: 0; }
+.lib li { padding: 4px 6px 4px 20px; border-radius: 3px; cursor: pointer; position: relative; }
+.lib li:hover { background: rgba(255,255,255,.08); }
+.lib li.sel::before { content: "▶"; position: absolute; left: 3px; color: var(--accent); animation: blink 1s steps(1) infinite; }
+.lib li small { color: var(--sub); float: right; }
+@keyframes blink { 50% { opacity: 0; } }
+.search { width: 100%; background: transparent; border: 1px solid var(--sub); color: var(--ink); padding: 4px 8px; font: inherit;
+          margin-bottom: 8px; border-radius: 3px; }
+
+/* 中央 */
+.main { display: grid; grid-template-rows: auto auto 1fr; gap: 12px; min-height: 0; overflow: auto; }
+.tabs { display: flex; gap: 6px; }
+.tab { padding: 6px 14px; border: 2px solid var(--line); border-radius: 4px 4px 0 0; cursor: pointer; color: var(--sub); }
+.tab.on { color: #000; background: var(--accent); border-color: var(--accent); }
+.tab b { color: inherit; }
+.row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+.help { display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 50%;
+        background: var(--accent2); color: #000; font-size: 11px; cursor: help; margin-left: 6px; position: relative; }
+.help:hover::after { content: attr(data-tip); position: absolute; left: 20px; top: -4px; width: 260px; background: #fffbe6; color: #222;
+        padding: 6px 8px; border-radius: 4px; font-size: 12px; line-height: 1.5; z-index: 5; white-space: normal; text-align: left; }
+
+/* エンベロープ */
+svg.env { width: 100%; height: 190px; background: var(--graph); border-radius: 4px; touch-action: none; }
+.env .curve { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linejoin: round; }
+.env .fill { fill: var(--accent); opacity: .15; }
+.env .h { fill: var(--ink); stroke: var(--accent); stroke-width: 3; cursor: grab; }
+.env .h:hover { r: 10; }
+.env text { fill: var(--sub); font: 12px "MS Gothic", monospace; }
+.env .gl { stroke: var(--sub); stroke-opacity: .25; }
+.vals { display: flex; gap: 16px; color: var(--sub); margin-top: 6px; }
+.vals b { color: var(--ink); }
+
+/* デューティ */
+.duty { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.duty div { border: 2px solid var(--sub); border-radius: 4px; padding: 6px; text-align: center; cursor: pointer; }
+.duty div.on { border-color: var(--accent); background: rgba(248,184,0,.12); }
+.duty svg { width: 100%; height: 36px; }
+.duty path { fill: none; stroke: var(--ink); stroke-width: 3; }
+.duty small { display: block; color: var(--sub); }
+
+/* カード(ビブラートなど) */
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.card .toggle { float: right; width: 44px; height: 22px; border-radius: 11px; background: var(--sub); position: relative; cursor: pointer; }
+.card .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .15s; }
+.card .toggle.on { background: var(--ok); }
+.card .toggle.on::after { left: 25px; }
+.slider { display: grid; grid-template-columns: 90px 1fr 36px; align-items: center; gap: 6px; margin: 6px 0; color: var(--sub); }
+.slider input { width: 100%; accent-color: var(--accent); }
+.slider span:last-child { color: var(--ink); text-align: right; }
+.card.off .slider { opacity: .3; }
+
+/* 下: 鍵盤とログ */
+.bottom { grid-column: 2 / 3; display: grid; grid-template-columns: 1fr 380px; gap: 12px; }
+.kb { position: relative; height: 70px; display: flex; }
+.kb .w { flex: 1; background: var(--key); border: 1px solid var(--keyb); border-radius: 0 0 4px 4px; }
+.kb .w:hover { background: var(--accent); }
+.kb .b { position: absolute; width: 3.8%; height: 42px; background: var(--keyb); border: 1px solid var(--key); top: 0; }
+.log { font-size: 12px; color: var(--ok); height: 70px; overflow: hidden; white-space: pre; }
+.left-bottom { grid-column: 1 / 2; }
+.save { text-align: center; }
+.save .big { font-size: 15px; padding: 10px; width: 100%; }
+</style>
+</head>
+<body>
+<div class="switch">テーマ:
+  <button onclick="theme('rpg')">A RPGウィンドウ</button>
+  <button onclick="theme('console')">B 本体カラー</button>
+  <button onclick="theme('crt')">C ブラウン管</button>
+</div>
+
+<div class="app">
+  <div class="top win">
+    <span class="logo">FAMIMIMIDI SOUND EDITOR</span>
+    <span class="status">USB MIDI Interface に接続中 / 入力: microKEY2</span>
+    <span class="spacer"></span>
+    <button class="btn">波形メモリ</button>
+    <button class="btn">A/B 比較</button>
+    <button class="btn main">★ カートリッジに保存</button>
+    <button class="btn danger">パニック</button>
+  </div>
+
+  <div class="win lib">
+    <h2>▼ 音色ライブラリ</h2>
+    <input class="search" placeholder="🔍 さがす">
+    <ul>
+      <li>J-POP リード 標準 <small>ch1</small></li>
+      <li>J-POP リード バラード <small>ch1</small></li>
+      <li class="sel">ロックマン風 リード <small>ch1</small></li>
+      <li>Tim Follin風 高速アルペジオ <small>ch1</small></li>
+      <li>疑似ギター 歪み <small>ch1</small></li>
+      <li>三角波ベース <small>ch3</small></li>
+      <li>ノイズ・ドラム <small>ch4</small></li>
+    </ul>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <div class="tab on"><b>1</b> パルス波1</div><div class="tab">2 パルス波2</div><div class="tab">3 三角波</div>
+      <div class="tab">4 ノイズ</div><div class="tab">5 DPCM/波形</div>
+      <span class="spacer"></span><div class="tab">かんたん ⇄ 詳細</div>
+    </div>
+
+    <div class="row">
+      <div class="win">
+        <h2>エンベロープ(ADSR)<span class="help" data-tip="鳴らしてから消えるまでの音量の変化。白い点をつまんで動かせます。A=立ち上がり D=減っていく速さ S=押している間の音量 R=離した後の余韻">?</span></h2>
+        <svg class="env" id="env" viewBox="0 0 600 190">
+          <line class="gl" x1="0" y1="20" x2="600" y2="20"/><line class="gl" x1="0" y1="170" x2="600" y2="170"/>
+          <path class="fill" id="fill"/><path class="curve" id="curve"/>
+          <text x="8" y="16">最大</text><text x="8" y="186">0</text><text x="470" y="186">← 鍵盤を離す</text>
+          <circle class="h" id="hA" r="8"/><circle class="h" id="hD" r="8"/><circle class="h" id="hR" r="8"/>
+        </svg>
+        <div class="vals">A <b id="vA"></b> D <b id="vD"></b> S <b id="vS"></b> R <b id="vR"></b></div>
+      </div>
+      <div class="win">
+        <h2>デューティ比<span class="help" data-tip="パルス波の音の太さ。12.5%=細く鋭い 25%=ファミコンのメロディの定番 50%=丸い">?</span></h2>
+        <div class="duty" id="duty"></div>
+        <h2 style="margin-top:14px">おまかせで始める</h2>
+        <select class="search"><option>[ゲーム風] ロックマン風 リード</option><option>[基本] ピコピコ</option></select>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="win card"><h2>ビブラート<span class="help" data-tip="音程を周期的に揺らす。ディレイで遅らせると、伸ばした音だけ揺れる">?</span><span class="toggle on" onclick="tog(this)"></span></h2>
+        <div class="slider"><span>レート</span><input type="range" min="0" max="20" value="6"><span>6</span></div>
+        <div class="slider"><span>デプス</span><input type="range" min="1" max="12" value="1"><span>1</span></div>
+        <div class="slider"><span>ディレイ</span><input type="range" min="0" max="127" value="40"><span>40</span></div></div>
+      <div class="win card off"><h2>アルペジエーター<span class="help" data-tip="押した和音を高速で順番に鳴らす。チップチューンのビリビリした和音">?</span><span class="toggle" onclick="tog(this)"></span></h2>
+        <div class="slider"><span>タイム</span><input type="range" value="4"><span>4</span></div>
+        <div class="slider"><span>順序</span><input type="range" value="4"><span>Up</span></div></div>
+      <div class="win card off"><h2>ポルタメント<span class="help" data-tip="次の音へ音程をすべらせる">?</span><span class="toggle" onclick="tog(this)"></span></h2>
+        <div class="slider"><span>タイム</span><input type="range" value="4"><span>4</span></div></div>
+    </div>
+  </div>
+
+  <div class="win left-bottom save">
+    <button class="btn main big">★ この音をカートリッジに保存</button>
+    <div style="color:var(--sub);margin-top:6px">保存場所 13(呼び出し番号 101)</div>
+  </div>
+  <div class="bottom">
+    <div class="win"><div class="kb" id="kb"></div></div>
+    <div class="win log" id="log">01:11:25.177 OUT B0 46 30 ch1 CC#70=48 デューティ比
+01:11:25.178 OUT B0 4F 70 ch1 CC#79=112 サスティン・レベル
+01:11:25.582 OUT B0 01 40 ch1 CC#1=64 モジュレーション</div>
+  </div>
+</div>
+
+<script>
+function theme(t) { document.documentElement.dataset.theme = t; }
+function tog(el) { el.classList.toggle('on'); el.closest('.card').classList.toggle('off', !el.classList.contains('on')); }
+
+// デューティの絵
+const duty = document.getElementById('duty');
+[[12.5, '12.5%', '細い'], [25, '25%', '定番'], [50, '50%', '丸い'], [75, '75%', '']].forEach(([p, t, s], i) => {
+  const hi = 4 + p / 100 * 40;
+  const d = document.createElement('div');
+  d.className = i === 1 ? 'on' : '';
+  d.innerHTML = `<svg viewBox="0 0 100 40"><path d="M2 34 H10 V6 H${10 + hi} V34 H${54} V6 H${54 + hi} V34 H98"/></svg>${t}<small>${s}</small>`;
+  d.onclick = () => { duty.querySelectorAll('div').forEach(x => x.className = ''); d.className = 'on'; };
+  duty.appendChild(d);
+});
+
+// 鍵盤
+const kb = document.getElementById('kb');
+for (let i = 0; i < 22; i++) kb.insertAdjacentHTML('beforeend', '<div class="w"></div>');
+[0, 1, 3, 4, 5, 7, 8, 10, 11, 12, 14, 15, 17, 18, 19].forEach(i =>
+  kb.insertAdjacentHTML('beforeend', `<div class="b" style="left:${(i + 0.7) / 22 * 100}%"></div>`));
+
+// エンベロープ(つまんで動かせる)
+const W = 600, TOP = 20, BOT = 170;
+let env = { a: 60, d: 90, s: 0.6, r: 120 };          // a,d,r は横幅(px)、s は高さの割合
+const $ = id => document.getElementById(id);
+function draw() {
+  const xA = 20 + env.a, xD = xA + env.d, sy = BOT - env.s * (BOT - TOP), xOff = 470, xR = xOff + env.r;
+  const pts = `M20 ${BOT} L${xA} ${TOP} L${xD} ${sy} L${xOff} ${sy} L${Math.min(xR, W - 4)} ${BOT}`;
+  $('curve').setAttribute('d', pts); $('fill').setAttribute('d', pts + ' Z');
+  [['hA', xA, TOP], ['hD', xD, sy], ['hR', Math.min(xR, W - 4), BOT]].forEach(([id, x, y]) => {
+    $(id).setAttribute('cx', x); $(id).setAttribute('cy', y); });
+  const t = px => Math.round(px / 3);
+  $('vA').textContent = t(env.a); $('vD').textContent = t(env.d); $('vS').textContent = Math.round(env.s * 15) + '/15';
+  $('vR').textContent = t(env.r);
+}
+let drag = null;
+['hA', 'hD', 'hR'].forEach(id => $(id).addEventListener('pointerdown', e => { drag = id; e.target.setPointerCapture(e.pointerId); }));
+$('env').addEventListener('pointermove', e => {
+  if (!drag) return;
+  const r = $('env').getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * 190;
+  if (drag === 'hA') env.a = Math.max(0, Math.min(200, x - 20));
+  if (drag === 'hD') { env.d = Math.max(0, Math.min(440 - env.a, x - 20 - env.a)); env.s = Math.max(0, Math.min(1, (BOT - y) / (BOT - TOP))); }
+  if (drag === 'hR') env.r = Math.max(0, Math.min(126, x - 470));
+  draw();
+});
+addEventListener('pointerup', () => drag = null);
+document.querySelectorAll('.slider input').forEach(s => s.oninput = () => s.nextElementSibling.textContent = s.value);
+draw();
+</script>
+</body>
+</html>

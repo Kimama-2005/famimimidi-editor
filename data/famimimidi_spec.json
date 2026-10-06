@@ -1,0 +1,1126 @@
+{
+  "device": "ふぁみみみっでぃ (Famimimidi) ファミコン版",
+  "source": "Famimimidi_implement_chart_v10.pdf (ver 1.0, 日本語版)。NES版とはCC#48範囲・CC#77表記などが異なる",
+  "channels": {
+    "1": {
+      "name": "パルス波1",
+      "note_range": [
+        33,
+        108
+      ],
+      "velocity": "16段階"
+    },
+    "2": {
+      "name": "パルス波2",
+      "note_range": [
+        33,
+        108
+      ],
+      "velocity": "16段階"
+    },
+    "3": {
+      "name": "三角波",
+      "note_range": [
+        21,
+        96
+      ],
+      "velocity": "ON/OFFのみ"
+    },
+    "4": {
+      "name": "ノイズ",
+      "note_range": [
+        0,
+        127
+      ],
+      "velocity": "16段階",
+      "note_map": "noise"
+    },
+    "5": {
+      "name": "DPCM / 波形メモリ",
+      "note_range": [
+        0,
+        127
+      ],
+      "velocity": "DPCM:ON/OFF / 波形メモリ:32段階",
+      "note_map": "dpcm"
+    }
+  },
+  "channel_offset_boot": {
+    "通常起動": "ch1-5",
+    "Bボタンを押しながら電源ON": "ch6-10",
+    "A+Bを押しながら電源ON": "ch11-15"
+  },
+  "mode": "Mode4 固定(オムニ・オフ/モノ)。各チャンネル単音",
+  "note_off_velocity": "無視",
+  "aftertouch": "ch1-4。ポリフォニック・キープレッシャーはチャンネル・キープレッシャーとして動作",
+  "pitch_bend": "ch1-4。幅はCC#82",
+  "program_change": {
+    "range": "1-128 (MIDIデータバイトは0-127)",
+    "ch1_2_duty": {
+      "PC1": "12.5%",
+      "PC2": "25%",
+      "PC3": "50%",
+      "PC4": "75%"
+    },
+    "factory": "PC4〜 いろいろな音色 (中身は非公開・未調査)",
+    "user_wavetable": "PC61-76 (SysEx登録、ch5波形メモリのみ、セーブあり)",
+    "user_macro": "PC89-128 (CC#51で登録、全chで共通、セーブあり)",
+    "defaults": {
+      "ch1,2": "PC3",
+      "ch3,4": "PC1",
+      "ch5": "PC8"
+    }
+  },
+  "sysex": {
+    "wavetable_data": "F0 00 70 7F [4bit値 00-0F を16個] F7  (2バイト目は任意ID 00-7D)",
+    "wavetable_register": "F0 00 71 7F NN F7  NN=60-75 (0x3C-0x4B) → PC61-76 (-1に注意)。セーブあり",
+    "example_saw": "F0 00 70 7F 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F F7"
+  },
+  "not_supported": [
+    "ユニバーサルSysEx",
+    "ソング・ポジション",
+    "ソング・セレクト",
+    "チューン",
+    "タイミング・クロック",
+    "アクティブ・センシング",
+    "ローカルON/OFF",
+    "システム・リセット(本体リセットか電源再投入)"
+  ],
+  "controller": {
+    "↑↓": "アルペジエーター CC#23-27 OFF/ON (7タイプ)",
+    "SELECT+↑↓": "ブレス・コントロール・タイプ CC#3 (8タイプ)",
+    "←→": "プログラムチェンジ ±1",
+    "SELECT+←→": "プログラムチェンジ ±10",
+    "A": "Duty変更 PC1-4 (ch1,2のみ)",
+    "SELECT+A": "MIDI Ch1への割り当てチャンネル +1 (Ch1の鍵盤でCh1-5の音源を鳴らせる)",
+    "SELECT+B": "同 -1",
+    "B": "ベロシティMAX (CC#9) OFF/ON",
+    "START": "Ch5 DPCM⇔波形メモリ (CC#18)",
+    "SELECT+START": "PAL/NTSC音程補正の切替 (通常は自動判定)",
+    "_verified": "電源ON後 SELECT+→ ×9 でユーザー領域(PC89-128)に届く(8回では届かない)。正確な着地PCと ← の刻みは未確認(docs/03 F17, U1)"
+  },
+  "midi_timing": {
+    "baud": 31250,
+    "ms_per_byte": 0.32,
+    "cc_ms": 0.96,
+    "pc_ms": 0.64,
+    "note": "ランニングステータス無しの概算。フルパッチ32CC≈30.7ms"
+  },
+  "quantize_rule": "「N段階(0-127で割り振り)」は 0-127 を N 等分。段階k(0始まり)の中央値 = floor(k*128/N + 64/N)。「0-M (M+1〜127は均等割り振り)」は 0-M を直接送れば確実",
+  "params": [
+    {
+      "cc": 1,
+      "name_ja": "モジュレーション",
+      "name_en": "Modulation",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "continuous",
+      "default": 0,
+      "note": "初期値: 5Hz ±2半音 ディレイなし 不感帯20。ch4は周期切替機能。CC#20でCC#70と入替可。CC#81以下の値は無効(不感帯)と解釈",
+      "interpretation": "ビブラートを掛けるにはCC#1をCC#81(不感帯)より大きくする必要がある、と解釈して運用。実機で動作は確認済みだが境界値は未測定"
+    },
+    {
+      "cc": 2,
+      "name_ja": "ブレス・コントロール",
+      "name_en": "Breath Control",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "continuous",
+      "default": 0
+    },
+    {
+      "cc": 3,
+      "name_ja": "ブレス・コントロール・タイプ",
+      "name_en": "Breath Control Type",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "enum",
+      "default": 8,
+      "options": [
+        "OFF",
+        "Modulation",
+        "PitchUp",
+        "PitchDown",
+        "Tremolo",
+        "VolumeUp",
+        "VolDown",
+        "HalfDown",
+        "Expression"
+      ],
+      "encoding": "0-8を直接指定(9-127は均等割り振り)"
+    },
+    {
+      "cc": 5,
+      "name_ja": "ポルタメント・タイム",
+      "name_en": "Portamento Time",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "time_exp",
+      "default": 12,
+      "range_desc": "0-127 指数的。127で約5秒。12=約100ms"
+    },
+    {
+      "cc": 7,
+      "name_ja": "ボリューム",
+      "name_en": "Volume",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "continuous",
+      "default": 127,
+      "verified": "マクロに記録可能(実機確認)"
+    },
+    {
+      "cc": 9,
+      "name_ja": "ベロシティ固定",
+      "name_en": "Constant Velocity",
+      "channels": [
+        1,
+        2,
+        4,
+        5
+      ],
+      "kind": "special",
+      "default": 0,
+      "range_desc": "0-7:OFF / 8-127:固定値"
+    },
+    {
+      "cc": 11,
+      "name_ja": "エクスプレッション",
+      "name_en": "Expression",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "continuous",
+      "default": 127
+    },
+    {
+      "cc": 12,
+      "name_ja": "アタック・レベル",
+      "name_en": "Attack Level",
+      "channels": [
+        1,
+        2,
+        4,
+        5
+      ],
+      "kind": "steps",
+      "default": 0,
+      "steps": 16,
+      "encoding": "0-127を16等分。中央値 = k*8+4"
+    },
+    {
+      "cc": 13,
+      "name_ja": "スイープ・モード",
+      "name_en": "Sweep Mode",
+      "channels": [
+        1,
+        2
+      ],
+      "kind": "switch",
+      "default": 0,
+      "note": "ハードウェア機能。0-63:OFF / 64-127:ON"
+    },
+    {
+      "cc": 14,
+      "name_ja": "スイープ変化方向",
+      "name_en": "Sweep Direction",
+      "channels": [
+        1,
+        2
+      ],
+      "kind": "switch",
+      "default": 127,
+      "options": [
+        "下降",
+        "上昇"
+      ],
+      "note": "0-63:下降 / 64-127:上昇"
+    },
+    {
+      "cc": 15,
+      "name_ja": "スイープ時間",
+      "name_en": "Sweep Time",
+      "channels": [
+        1,
+        2
+      ],
+      "kind": "steps",
+      "default": 16,
+      "steps": 8,
+      "encoding": "0-127を8等分。中央値 = k*16+8",
+      "note": "初期値16=段階1"
+    },
+    {
+      "cc": 16,
+      "name_ja": "スイープ周波数変化",
+      "name_en": "Sweep Shift",
+      "channels": [
+        1,
+        2
+      ],
+      "kind": "steps",
+      "default": 48,
+      "steps": 8,
+      "encoding": "0-127を8等分。中央値 = k*16+8",
+      "note": "初期値48=段階3"
+    },
+    {
+      "cc": 17,
+      "name_ja": "ノート順(ノイズ)",
+      "name_en": "Noise Note Order",
+      "channels": [
+        4
+      ],
+      "kind": "switch",
+      "default": 0,
+      "options": [
+        "逆順",
+        "正順"
+      ],
+      "note": "0-63:逆順 / 64-127:正順。実装表のノイズマップ(ノート0=L0=最も高い)は CC#17=0(初期値)の並び。実機確認済み(docs/03 F16)",
+      "verified": "CC#17=0 でノート0がノート15より高い。127で逆"
+    },
+    {
+      "cc": 18,
+      "name_ja": "波形メモリモード",
+      "name_en": "Wavetable Mode",
+      "channels": [
+        5
+      ],
+      "kind": "switch",
+      "default": 0,
+      "test_function": true,
+      "note": "0-63:OFF(DPCM) / 64-127:ON"
+    },
+    {
+      "cc": 19,
+      "name_ja": "波形メモリ解像度",
+      "name_en": "Wavetable Resolution",
+      "channels": [
+        5
+      ],
+      "kind": "enum",
+      "default": 0,
+      "test_function": true,
+      "options": [
+        "自動",
+        "1/2",
+        "1/4"
+      ],
+      "encoding": "0-2を直接指定(3-127は均等割り振り)"
+    },
+    {
+      "cc": 20,
+      "name_ja": "CC#1⇔CC#70 機能入替",
+      "name_en": "Swap CC1/CC70",
+      "channels": [
+        1,
+        2
+      ],
+      "kind": "switch",
+      "default": 0
+    },
+    {
+      "cc": 21,
+      "name_ja": "ホールド・タイム自動設定",
+      "name_en": "Auto Hold Time",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "switch",
+      "default": 0,
+      "note": "CC#83を変更するとOFFになる"
+    },
+    {
+      "cc": 22,
+      "name_ja": "ノート記憶モード",
+      "name_en": "Note Remember Mode",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "switch",
+      "default": 127,
+      "note": "アルペジエーターOFF時のみ有効。ONだと押鍵中の前の音に戻る(レガート)"
+    },
+    {
+      "cc": 23,
+      "name_ja": "アルペジエーター・タイプ",
+      "name_en": "Arpeggiator Type",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "enum",
+      "default": 0,
+      "options": [
+        "OFF",
+        "1ノート",
+        "2ノート以上"
+      ],
+      "encoding": "0-2を直接指定(3-127は均等割り振り)。実運用では127=2ノート以上で動作確認"
+    },
+    {
+      "cc": 24,
+      "name_ja": "アルペジエーター・タイム",
+      "name_en": "Arpeggiator Time",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "continuous",
+      "default": 10,
+      "range_desc": "7.9ms-約1秒。10=79ms。3付近で和音に聞こえる"
+    },
+    {
+      "cc": 25,
+      "name_ja": "アルペジエーター・ノートオフタイム",
+      "name_en": "Arpeggiator Note-off Time",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "continuous",
+      "default": 7,
+      "range_desc": "最大=アルペジエーター・タイム。7=55.3ms"
+    },
+    {
+      "cc": 26,
+      "name_ja": "アルペジエーター再生順序",
+      "name_en": "Arpeggiator Order",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "enum",
+      "default": 4,
+      "options": [
+        "UpDown",
+        "UpDownB",
+        "DownUp",
+        "DownUpB",
+        "Up",
+        "Down",
+        "Random",
+        "Order"
+      ],
+      "encoding": "0-7直接(8-127は均等割り振り)"
+    },
+    {
+      "cc": 27,
+      "name_ja": "アルペジエーター・オクターブ範囲",
+      "name_en": "Arpeggiator Octave Range",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "enum",
+      "default": 0,
+      "options": [
+        "1oct",
+        "2oct",
+        "3oct",
+        "4oct",
+        "5oct",
+        "6oct"
+      ],
+      "encoding": "0-5直接(6-127は均等割り振り)"
+    },
+    {
+      "cc": 30,
+      "name_ja": "アフタータッチ・タイプ",
+      "name_en": "Aftertouch Type",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "enum",
+      "default": 1,
+      "options": [
+        "OFF",
+        "Modulation",
+        "PitchUp",
+        "PitchDown",
+        "Tremolo",
+        "VolumeUp",
+        "VolDown",
+        "HalfDown",
+        "Expression"
+      ],
+      "encoding": "0-8直接(9-127は均等割り振り)"
+    },
+    {
+      "cc": 45,
+      "name_ja": "ユーザーマクロ記録",
+      "name_en": "User Macro Record",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": 0,
+      "saved": true,
+      "range_desc": "0:記録停止+保存 / 1-40:ユーザーマクロ記録開始",
+      "verified": "動作確認済み。1マクロに記録できるのは先頭10個のCCまで(11個目以降は黙って捨てられる)。記録中のCCはリアルタイムにも反映される"
+    },
+    {
+      "cc": 46,
+      "name_ja": "マクロ実行(基本)",
+      "name_en": "Macro Execute (Basic)",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": 0,
+      "range_desc": "1-127",
+      "verified": "CC#49=46 + 1-8を実行して聴感上の変化なし"
+    },
+    {
+      "cc": 47,
+      "name_ja": "マクロ実行(ユーザー)",
+      "name_en": "Macro Execute (User)",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": 0,
+      "range_desc": "1-40",
+      "verified": "動作確認済み"
+    },
+    {
+      "cc": 48,
+      "name_ja": "マクロ実行(Ex)",
+      "name_en": "Macro Execute (Ex)",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": 0,
+      "range_desc": "1-87"
+    },
+    {
+      "cc": 49,
+      "name_ja": "マクロ切り替え",
+      "name_en": "Macro Bank Switch",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "enum",
+      "default": 46,
+      "options": {
+        "46": "基本",
+        "47": "ユーザー",
+        "48": "Ex"
+      },
+      "note": "CC#52-59を設定すると46に戻る 実装表では ch1-4 のみ。ch5 でマクロ記録できるかは未確認(docs/03 U13)",
+      "interpretation": "CC#52-59が参照するマクロのバンクを選ぶ設定と推測"
+    },
+    {
+      "cc": 50,
+      "name_ja": "初期化マクロ設定",
+      "name_en": "Startup Macro",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": null,
+      "saved": true,
+      "range_desc": "1-5: 指定chの電源ONマクロに最終実行マクロを設定",
+      "verified": "未確認(送信はしたが効果は検証していない)"
+    },
+    {
+      "cc": 51,
+      "name_ja": "PCマクロ設定",
+      "name_en": "PC Macro Assign",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": null,
+      "saved": true,
+      "range_desc": "88-127 (PC89-128) に最終実行マクロを設定",
+      "verified": "動作確認済み。CC#51=v のあと、プログラムチェンジのデータバイト v (0始まり) で呼び出せる。v=92 → PC93(1始まり表記)"
+    },
+    {
+      "cc": 52,
+      "name_ja": "アタック・マクロ",
+      "name_en": "Attack Macro",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "macro_ref",
+      "default": 0,
+      "note": "指定マクロを該当タイミングで実行。0=なし",
+      "verified": "未検証"
+    },
+    {
+      "cc": 53,
+      "name_ja": "ディケイ・マクロ",
+      "name_en": "Decay Macro",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "macro_ref",
+      "default": 0,
+      "note": "指定マクロを該当タイミングで実行。0=なし",
+      "verified": "未検証"
+    },
+    {
+      "cc": 54,
+      "name_ja": "サスティン・マクロ",
+      "name_en": "Sustain Macro",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "macro_ref",
+      "default": 0,
+      "note": "指定マクロを該当タイミングで実行。0=なし",
+      "verified": "未検証"
+    },
+    {
+      "cc": 55,
+      "name_ja": "リリース・マクロ",
+      "name_en": "Release Macro",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "macro_ref",
+      "default": 0,
+      "note": "指定マクロを該当タイミングで実行。0=なし",
+      "verified": "未検証"
+    },
+    {
+      "cc": 56,
+      "name_ja": "モジュレーション・マクロ",
+      "name_en": "Modulation Macro",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "macro_ref",
+      "default": 0,
+      "note": "指定マクロを該当タイミングで実行。0=なし",
+      "verified": "未検証"
+    },
+    {
+      "cc": 57,
+      "name_ja": "トレモロ・マクロ",
+      "name_en": "Tremolo Macro",
+      "channels": [
+        1,
+        2,
+        4
+      ],
+      "kind": "macro_ref",
+      "default": 0,
+      "note": "指定マクロを該当タイミングで実行。0=なし",
+      "verified": "未検証"
+    },
+    {
+      "cc": 58,
+      "name_ja": "ポルタメント・スタート・マクロ",
+      "name_en": "Portamento Start Macro",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "macro_ref",
+      "default": 0,
+      "note": "指定マクロを該当タイミングで実行。0=なし",
+      "verified": "未検証"
+    },
+    {
+      "cc": 59,
+      "name_ja": "ポルタメント・エンド・マクロ",
+      "name_en": "Portamento End Macro",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "macro_ref",
+      "default": 0,
+      "note": "指定マクロを該当タイミングで実行。0=なし",
+      "verified": "未検証"
+    },
+    {
+      "cc": 64,
+      "name_ja": "ホールド1",
+      "name_en": "Hold 1 (Sustain Pedal)",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "switch",
+      "default": 0
+    },
+    {
+      "cc": 65,
+      "name_ja": "ポルタメント",
+      "name_en": "Portamento On/Off",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "switch",
+      "default": 0,
+      "note": "ONで最終ノートをリセット"
+    },
+    {
+      "cc": 70,
+      "name_ja": "デューティ比",
+      "name_en": "Duty Cycle",
+      "channels": [
+        1,
+        2
+      ],
+      "kind": "steps",
+      "default": 64,
+      "steps": 4,
+      "options": [
+        "12.5%",
+        "25%",
+        "50%",
+        "75%"
+      ],
+      "encoding": "0-127を4等分。中央値 16/48/80/112",
+      "verified": "4段階の変化を実機確認"
+    },
+    {
+      "cc": 72,
+      "name_ja": "リリース・タイム",
+      "name_en": "Release Time",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "time_exp",
+      "default": 0,
+      "range_desc": "指数的。127で約10秒"
+    },
+    {
+      "cc": 73,
+      "name_ja": "アタック・タイム",
+      "name_en": "Attack Time",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "time_exp",
+      "default": 0,
+      "range_desc": "指数的。127で約10秒。CC#12(アタック・レベル)から最大まで上がる時間と解釈"
+    },
+    {
+      "cc": 75,
+      "name_ja": "ディケイ・タイム",
+      "name_en": "Decay Time",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "time_exp",
+      "default": 0,
+      "range_desc": "指数的。127で約10秒",
+      "note": "CC#79(サスティン・レベル)が127だと減衰先が最大なので変化が聞こえない。0=瞬時にサスティン・レベルへ"
+    },
+    {
+      "cc": 76,
+      "name_ja": "モジュレーション・レート",
+      "name_en": "Modulation Rate",
+      "channels": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "kind": "continuous",
+      "default": 5,
+      "range_desc": "0-127Hz。ch4はマクロ用"
+    },
+    {
+      "cc": 77,
+      "name_ja": "モジュレーション・デプス",
+      "name_en": "Modulation Depth",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "continuous",
+      "default": 2,
+      "range_desc": "±0〜±127半音 (初期値2=200cent)",
+      "note": "最小の非ゼロ値は1。これより浅くしたい場合はCC#1を下げる"
+    },
+    {
+      "cc": 78,
+      "name_ja": "モジュレーション・ディレイ",
+      "name_en": "Modulation Delay",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "time_exp",
+      "default": 0,
+      "range_desc": "指数的。127で約10秒"
+    },
+    {
+      "cc": 79,
+      "name_ja": "サスティン・レベル",
+      "name_en": "Sustain Level",
+      "channels": [
+        1,
+        2,
+        4,
+        5
+      ],
+      "kind": "steps",
+      "default": 127,
+      "steps": 16,
+      "encoding": "0-127を16等分。中央値 = k*8+4"
+    },
+    {
+      "cc": 80,
+      "name_ja": "モジュレーション波形",
+      "name_en": "Modulation Waveform",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "enum",
+      "default": 0,
+      "options": [
+        "SineWave",
+        "Saw",
+        "RevSaw",
+        "Pulse25%",
+        "Pulse50%",
+        "Triangle",
+        "Random",
+        "SineWave"
+      ],
+      "encoding": "0-7直接(8-127は均等割り振り)"
+    },
+    {
+      "cc": 81,
+      "name_ja": "モジュレーション無効区間",
+      "name_en": "Modulation Dead Zone",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "continuous",
+      "default": 20,
+      "range_desc": "0-64。CC#1の無効区間"
+    },
+    {
+      "cc": 82,
+      "name_ja": "ピッチベンド・センシティビティ",
+      "name_en": "Pitch Bend Sensitivity",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "continuous",
+      "default": 2,
+      "range_desc": "半音単位"
+    },
+    {
+      "cc": 83,
+      "name_ja": "ホールド・タイム",
+      "name_en": "Hold Time",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "time_exp",
+      "default": 0,
+      "range_desc": "指数的。127で約10秒"
+    },
+    {
+      "cc": 84,
+      "name_ja": "ポルタメント・コントロール",
+      "name_en": "Portamento Control",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "special",
+      "default": 0,
+      "range_desc": "0:最終ノートから / 1-63:下降 / 64-127:上昇"
+    },
+    {
+      "cc": 85,
+      "name_ja": "デチューン",
+      "name_en": "Detune",
+      "channels": [
+        1,
+        2,
+        3
+      ],
+      "kind": "continuous",
+      "default": 64,
+      "range_desc": "0-64-127 = -64 / ±0 / +63 cent"
+    },
+    {
+      "cc": 86,
+      "name_ja": "トレモロ・レート",
+      "name_en": "Tremolo Rate",
+      "channels": [
+        1,
+        2,
+        4
+      ],
+      "kind": "continuous",
+      "default": 20,
+      "range_desc": "0-31.75Hz (1あたり0.25Hz)。20=5Hz"
+    },
+    {
+      "cc": 87,
+      "name_ja": "トレモロ・デプス",
+      "name_en": "Tremolo Depth",
+      "channels": [
+        1,
+        2,
+        4
+      ],
+      "kind": "steps",
+      "default": 40,
+      "steps": 16,
+      "encoding": "0-127を16等分。中央値 = k*8+4",
+      "note": "初期値40=段階5"
+    },
+    {
+      "cc": 88,
+      "name_ja": "トレモロ波形",
+      "name_en": "Tremolo Waveform",
+      "channels": [
+        1,
+        2,
+        4
+      ],
+      "kind": "enum",
+      "default": 0,
+      "options": [
+        "SineWave1",
+        "SineWave2",
+        "SineWave3",
+        "SineWave4",
+        "Sawtooth",
+        "ReverseSawtooth",
+        "Pulse25%",
+        "Pulse50%",
+        "Triangle1",
+        "Triangle2"
+      ],
+      "encoding": "0-9直接(10-127は均等割り振り)"
+    },
+    {
+      "cc": 89,
+      "name_ja": "トレモロ無効区間",
+      "name_en": "Tremolo Dead Zone",
+      "channels": [
+        1,
+        2,
+        4
+      ],
+      "kind": "continuous",
+      "default": 20,
+      "range_desc": "0-64。CC#92の無効区間"
+    },
+    {
+      "cc": 92,
+      "name_ja": "トレモロ",
+      "name_en": "Tremolo Amount",
+      "channels": [
+        1,
+        2,
+        4
+      ],
+      "kind": "continuous",
+      "default": 0,
+      "range_desc": "0-127。用途はモジュレーションホイールと同様"
+    },
+    {
+      "cc": 120,
+      "name_ja": "オール・サウンド・オフ",
+      "name_en": "All Sound Off",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": null
+    },
+    {
+      "cc": 121,
+      "name_ja": "リセット・オール・コントローラー",
+      "name_en": "Reset All Controllers",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": null,
+      "warning": "全音停止。全CC・PC・PBを初期化。発音中に送ると音が切れるので、シームレス切替では使わない"
+    },
+    {
+      "cc": 123,
+      "name_ja": "オール・ノート・オフ",
+      "name_en": "All Notes Off",
+      "channels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "kind": "action",
+      "default": null,
+      "note": "三角波は即時停止"
+    }
+  ],
+  "noise_map": {
+    "desc": "ノート0-63=長周期(L)、64-127=短周期(S)。各16ノートでL0-L15 / S0-S15 を繰り返す。番号が小さいほど高い音",
+    "formula": "period = note % 16; type = 'L' if note < 64 else 'S'",
+    "order_note": "表の並びはMIDINES準拠で、CC#17=0(初期値)のときの並び(実機確認済み)。CC#17=127で逆順"
+  },
+  "dpcm_map": {
+    "note_0": "プチノイズ。ベロシティで時間指定 (vel0=ノートオフ, vel1=0.0064s, vel63=0.0032s, vel127=0.0001s)",
+    "notes_1_29": "プチノイズ。ノート番号で時間指定 (1=0.00200s 〜 29=0.00060s, 0.00005s刻み)",
+    "drums": {
+      "35": "バスドラム1",
+      "36": "バスドラム2",
+      "37": "サイドスティック1",
+      "38": "スネア1",
+      "39": "サイドスティック2",
+      "40": "スネア2",
+      "41": "ローフロアタム",
+      "42": "クローズド・ハイハット1",
+      "43": "ハイフロアタム",
+      "44": "クローズド・ハイハット2",
+      "45": "ロータム",
+      "46": "オープン・ハイハット",
+      "47": "ローミドルタム",
+      "48": "ハイミドルタム",
+      "49": "クラッシュ・シンバル",
+      "50": "ハイタム",
+      "51": "ライド・シンバル"
+    }
+  }
+}
