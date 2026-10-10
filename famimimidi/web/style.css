@@ -121,6 +121,7 @@ input[type=radio], input[type=checkbox] { accent-color: var(--accent); }
 .drawer { position: fixed; top: 84px; right: 12px; width: 760px; max-width: calc(100vw - 24px); z-index: 30; display: none; }
 .drawer.open { display: block; }
 .drawer .win { box-shadow: 0 8px 24px rgba(0, 0, 0, .6), var(--glow); max-height: calc(100vh - 100px); overflow: auto; }
+.credit { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--sub); font-size: 12px; line-height: 1.6; }
 .maptable { border-collapse: collapse; margin: 2px 0 8px 16px; font-size: 14px; white-space: nowrap; }
 .maptable th { color: var(--sub); font-weight: normal; text-align: left; padding: 0 8px 2px 0; }
 .maptable td { padding: 2px 8px 2px 0; }

@@ -47,7 +47,7 @@
 
 ## GitHub での公開(2026-10-06 ユーザーと合意)
 
-- 公開リポジトリ。ライセンス MIT。ソフト名 FAMIMIMIDI SOUND EDITOR。README に「非公式」と作者さん(@hekekekun)への配慮を明記
+- https://github.com/Kimama-2005/famimimidi-editor (2026-10-06 に公開 → 作者さんへの確認のため一時非公開 → **2026-10-10 作者さんに確認済み、公開**。クレジットは README と画面の「接続と設定」に入れている。作者さんとのやりとりの中身は公開側に書かない)。ライセンス MIT。ソフト名 FAMIMIMIDI SOUND EDITOR。README に「非公式」と作者さん(@hekekekun)への配慮を明記
 - **手元の main は公開しない**(実装表 PDF が履歴に入っている)。公開用は main とつながらないブランチ `public` を `python tools/publish.py "メッセージ" --author "名前 <noreply メール>"` で作り、`git push origin public:main` で送る
 - 作者さんの一次資料(実装表の PDF など)を公開側に入れない。`tools/publish.py` の EXCLUDE に足す
 
