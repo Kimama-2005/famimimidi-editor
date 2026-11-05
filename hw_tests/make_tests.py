@@ -462,7 +462,35 @@ def make_t13():
     s.save("T13_ch5_arp")
 
 
+def make_v0():
+    """V0: 音量(CC#7)を0にしても、強く弾くと鳴るか(2026-11-05 の報告「強く弾くと鳴る・鳴らないときもある」)。
+    ch1・ch2・ch3・ch5(波形メモリ)の順に、区切りのノイズ「チッチッ」のあと、
+    強さ127 を4回 → 少し空けて → 強さ64 を4回。何回聞こえたかを数えてもらう(強さを固定して、手の強さのばらつきを除く)"""
+    s = Song("V0 volume zero")
+    t = 240
+    for ch in (1, 2, 3, 4, 5):                           # 最後に戻すので、まず全部の音量を最大に(ch4 は区切りの音)
+        s.add(t, cc(ch, 7, 127)); t += T_CC
+    s.add(t, cc(5, 18, 127)); t += T_GAP                 # ch5 は波形メモリモード
+    for ch in (1, 2, 3, 5):
+        for _ in range(2):                               # 区切り: ノイズ(ch4)を2回
+            s.add(t, non(4, 40, 110)); t += 80
+            s.add(t, nof(4, 40)); t += 160
+        t += T_GAP
+        for num, val in ((79, 127), (75, 0), (72, 0), (7, 0)):   # 伸びる音にして、音量0
+            if num == 7 or ch != 3:                      # 三角波にはサスティン・レベルが無い
+                s.add(t, cc(ch, num, val)); t += T_CC
+        t += T_GAP
+        for vel in (127, 64):
+            for _ in range(4):
+                s.add(t, non(ch, 60, vel)); t += 480     # 0.6秒鳴らして
+                s.add(t, nof(ch, 60)); t += 320          # 0.4秒休む
+            t += 800                                     # 強さ127 と 64 の間を1秒空ける
+        s.add(t, cc(ch, 7, 127)); t += T_GAP             # この ch の音量を戻す
+    s.save("V0_volume_zero")
+
+
 if __name__ == "__main__":
+    make_v0()
     make_t13()
     make_t12()
     make_t11()

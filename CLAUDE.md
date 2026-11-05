@@ -32,7 +32,7 @@
 14. **PC→マクロの対応表は全chで共通。マクロは PC を受けたchだけに効く。**
 15. **ch5 の DPCM には音量(CC#7)が効かない。** ch5 のテストに無音判定は使えない。
 16. **「復旧用ファイルを再生した」という報告だけで状態を確定させない。** T0 の再生は PC 割り当てに効いていなかった(docs/03 F26)。書き込み後はアプリの「PCを1つずつ試す」で確かめる。
-17. **アプリは同時に1つしか動かさない**(`single.py`)。2つ動くと、両方が同じ鍵盤の演奏を受け取って二重に送る(Windows 11 は同じ MIDI 入力を複数のアプリで開ける)。報告とログが合わないときは、まず二重起動を疑う。
+17. **アプリは同時に1つしか動かさない**(`single.py`)。2つ動くと、両方が同じ鍵盤の演奏を受け取って二重に送る(Windows 11 は同じ MIDI 入力を複数のアプリで開ける)。報告とログが合わないときは、まず二重起動を疑う。**Domino・Cubase などほかのソフトが同じ鍵盤を開いて ふぁみみみっでぃ へ直接流していることもある**(2026-11-04、ログに無い音が鳴った)。起動時に Domino/Cubase/KROSS2 Editor が動いていれば警告する(`single.other_midi_apps`)
 
 未確認事項(ファミコンのコントローラーでPC89〜128に届くか、など)は `docs/03_verified_findings.md` にある。**未確認の事柄を確定として扱わないこと。**
 
@@ -49,38 +49,31 @@
 
 - https://github.com/Kimama-2005/famimimidi-editor (2026-10-06 に公開 → 作者さんへの確認のため一時非公開 → **2026-10-10 作者さんに確認済み、公開**。クレジットは README と画面の「接続と設定」に入れている。作者さんとのやりとりの中身は公開側に書かない)。ライセンス MIT。ソフト名 FAMIMIMIDI SOUND EDITOR。README に「非公式」と作者さん(@hekekekun)への配慮を明記
 - **手元の main は公開しない**(実装表 PDF が履歴に入っている)。公開用は main とつながらないブランチ `public` を `python tools/publish.py "メッセージ" --author "名前 <noreply メール>"` で作り、`git push origin public:main` で送る
-- 作者さんの一次資料(実装表の PDF など)を公開側に入れない。`tools/publish.py` の EXCLUDE に足す
+- 作者さんの一次資料(実装表の PDF など)を公開側に入れない。`tools/publish.py` の EXCLUDE に足す(フォルダも指定できる。以前の版 `famimimidi/`・`tests/` も外している)
 
 ## コード構成
 
+**2026-11-05 に作り直し版(`famimimidi2/`、仕様は `docs/SPEC_v2.md`)へ差し替えた。** 以前の版 `famimimidi/`・`tests/` は手元に参照用に残しているが起動しない(公開版には入れない。`tools/publish.py` の EXCLUDE)(以前の版で今の `user_data` を開くと形が違って壊れるおそれがあるため、起動ファイルも消した)。
+
 | パス | 内容 |
 |---|---|
-| `run.bat` | **新しい画面**(フェーズC、pywebview)を起動。フォルダに書き込めるか確かめ、使える `.venv` が無ければ `%LOCALAPPDATA%\FamimimidiEditor\venv` を `vendor/wheels` からオフラインで作る(別のパソコンへのコピー対策)。**cp932・CRLF で保存し、2行目の `chcp 932` を消さない**(日本語の行が壊れる) |
-| `run_classic.bat` | 予備の tkinter 版(`python -m famimimidi`) |
-| `famimimidi/core.py` / `settings.py` | 画面から独立した中身のまとめ役(接続・設定・ライブラリ・対応表) |
-| `famimimidi/cart_actions.py` | カートリッジへの書き込みの計画(文言・手順・対応表の更新)。新しい画面が使う。実行は `Core.run_write` |
-| `famimimidi/webapp.py` / `famimimidi/web/` | 新しい画面。`Bridge` が画面⇔Python の窓口(中身は `_` 付きで隠す)。画面は HTML/CSS/JS(外部 CDN なし)。テーマは CSS 変数(rpg/console/crt) |
-| `famimimidi/winmm.py` | Windows MIDI API(winmm)の ctypes ラッパー |
-| `famimimidi/engine.py` | **送信の関所**(書き込み系CCの遮断)、CCの間引き、MIDIスルー、送信ログ(`logs/日付.log`) |
-| `famimimidi/play.py` | 鍵盤の弾き方: 外部鍵盤の演奏を ch に振り分ける。割り当て表(ch ごとの鍵域・オクターブ・ホイール、ch1+ch2 の 2音/重ねる)とひな形。engine のスルーが使う。**割り当てはカートリッジに保存できない** |
-| `famimimidi/spec.py` | 仕様JSONの読み込み、段階値の変換、ログ用の日本語説明 |
-| `famimimidi/app.py` | tkinter の画面(接続・chタブ・全体の配置) |
-| `famimimidi/library.py` / `library_ui.py` | ライブラリ(`user_data/library.json`)。2階建て: 音色(Patch、1ch 分)と演奏セット(PerfSet、5ch の音色のコピー+割り当て表)。library_ui は tkinter 版(音色だけ) |
-| `famimimidi/audition.py` | 試聴(画面鍵盤・テストフレーズ) |
-| `famimimidi/wave.py` / `wave_ui.py` | ch5 波形メモリ(16点×4bit)の SysEx と、描いて試聴・PC61〜76 に登録する画面 |
-| `famimimidi/compare.py` / `ab_ui.py` | 音色の A/B 比較(違う設定を影響の大きい順に。効いていない設定は灰色) |
-| `famimimidi/easy.py` / `easy_ui.py` | 音色編集のかんたん表示(まとまり・「?」の説明・おまかせ `data/easy_presets.json`)。easy.py は画面から独立 |
-| `famimimidi/smf.py` / `export.py` / `export_ui.py` | MIDIファイル書き出し(format 1、chごとにトラック、文字は cp932) |
-| `famimimidi/sets.py` | 音色セットの「整える」: 共通の土台(電源ONマクロ)と切り替えの後始末の計算 |
-| `famimimidi/simple_ui.py` | **かんたん保存**(ユーザー向けの標準の入口)。「保存場所1〜40」「呼び出し番号89〜128」だけで説明し、マクロ番号・10個の選別(重要度順)は自動 |
-| `famimimidi/cartridge.py` / `cartridge_ui.py` | カートリッジ対応表(`user_data/cartridge.json`)、書き込み手順の組み立てと実行、確認ダイアログ |
-| `tests/` | 実機なしのテスト(`python -m unittest discover tests`) |
+| `run.bat` | アプリを起動(`python -m famimimidi2`)。フォルダに書き込めるか確かめ、使える `.venv` が無ければ `%LOCALAPPDATA%\FamimimidiEditor\venv` を `vendor/wheels` からオフラインで作る(別のパソコンへのコピー対策)。**cp932・CRLF で保存し、2行目の `chcp 932` を消さない**(日本語の行が壊れる)。**Git Bash の `sed -i` で触ると CRLF が LF になる**ので、バイト単位で直す |
+| `famimimidi2/device/` | 機器の層。`gate.py` = **送信の関所**(すべての送信はここ。書き込み系 CC#45/50/51 は `write_ok` のときだけ、CC#121 は送らない、CC の間引き、音量0の ch へのノートオンを省く、送信ログ `logs/日付.log`)。`winmm.py`(winmm の ctypes)、`single.py`(二重起動の防止とほかの MIDI ソフトの警告)、`sysex.py`(ch5 波形の SysEx) |
+| `famimimidi2/device/virtual.py` / `famimimidi2/web/vfc.js` | **🎮 仮想ファミコン**: ふぁみみみっでぃ無しで試すための出力ポートの偽物と、画面の音源(WebAudio。実装表の値どおりにそれっぽく鳴らす)。仮想のときはカートリッジへの書き込みと実機の確認を止める(控えを守る) |
+| `famimimidi2/model/` | データの層(送信しない)。`tone.py` 音色、`performance.py` 演奏セット(Part・KeyboardMap・Controls・ChordSettings)、`session.py` 作業中の演奏、`library.py`、`chordbook.py` 曲、`prefs.py` 設定、`cartmirror.py` カートリッジの控え、`store.py` 保存(一時ファイル→置き換え、読めないファイルは上書きしない)、`migrate.py` 以前の版からの移行(元は `user_data/old_v1/`) |
+| `famimimidi2/music/` | 音楽の計算。`spec.py` 実装表、`tonecards.py` 音色づくりのカード、`chords.py` コード・鍵盤の配置3通り・ボイシング・ChordWiki 取り込み(**歌詞は取り込まない**。歌詞は保存したページから表示するときだけ読む `sheet_from_chordwiki`。曲には場所 `source` だけ)、`waves.py` 波形の見本、`degree.py` コードモードの配置「度数+補足」(インスタコード風。基本コードの鍵+補足の鍵の同時押し、C4 で左右に分ける) |
+| `famimimidi2/performance/` | 時間で動くもの。`router.py` 鍵盤の振り分け(**タブで決まる**: 1〜5 はその ch、♪ は割り当て表かコードモード)、`chordmode.py` コードモード、`scheduler.py` ただ1本のスケジューラ |
+| `famimimidi2/cartridge/` | カートリッジへの書き込み。`plans.py` 計画(文言と手順)、`writer.py` 実行、`mirror.py` **控えを書き換えてよいのはここだけ**、`tidy.py` 整える(土台と後始末)。マクロの10項目は重要度順に自動で選ぶ |
+| `famimimidi2/checks.py` | ✓ 実機の確認モード(アプリが鳴らし、答えはボタン。結果は `user_data/checks/`) |
+| `famimimidi2/app.py` | アプリ本体(画面から独立)。接続・タブ・音色・演奏セット・コード・カートリッジ・確認の操作 |
+| `famimimidi2/bridge.py` / `famimimidi2/web/` | 画面(pywebview)。`Bridge` が画面⇔Python の窓口(公開メソッドだけ)。`evaluate_js` を呼ぶのは JsDispatcher の1本だけ。画面は HTML/CSS/JS(外部 CDN なし)、テーマは CSS 変数(rpg/console/crt) |
+| `tests_v2/` | 実機なしのテスト(`python -m unittest discover -s tests_v2 -t .`。`-t .` が要る)。実際の `user_data` は書き換えない(`paths.py` で一時フォルダへ) |
 | `tools/` | `make_icon.py`(アイコンを作る。Pillow が必要)、`publish.py`(公開用の履歴を作る) |
 | `make_shortcut.bat` | デスクトップにアイコン付きのショートカットを作る |
-| `famimimidi/icon.ico` / `web/icon.png` | アイコン(ファミコンのカセット+音符のドット絵) |
-| `hw_tests/` | 実機テストの MIDI ファイル生成と手順書 |
+| `famimimidi2/icon.ico` / `web/icon.png` | アイコン(ファミコンのカセット+音符のドット絵) |
+| `hw_tests/` | 実機テストの MIDI ファイル生成と手順書(以前の版のもの。作り直し版では「✓ 実機の確認」を使う) |
 
-送信は必ず `MidiEngine.send()` を通すこと(ログと遮断がそこにある)。
+送信は必ず `Gate.send()` を通すこと(ログと遮断がそこにある)。
 
 ## ドキュメント
 
@@ -90,7 +83,8 @@
 | `docs/02_midi_spec.md` | MIDI仕様の要点と、ファミコン版/NES版の差分 |
 | `docs/03_verified_findings.md` | **実機検証ログ。確定/未確定、カートリッジの現在の状態、テスト手法** |
 | `docs/04_sound_design.md` | 音作りのノウハウ(パラメーターの実際の効き方) |
-| `docs/06_roadmap.md` | **今後の計画**(A〜D 完了。E: 演奏セット) |
+| `docs/SPEC_v2.md` | **作り直し用の仕様書**(2026-11-05)。データの置き場所(音色・演奏セット・作業中の演奏・曲・控え・設定)と振る舞いを厳密に定義。新しい版はこれを元に作る |
+| `docs/06_roadmap.md` | **今後の計画**(A〜D 完了。E: 演奏セット、F: コードモード) |
 | `docs/05_requirements.md` | ソフトの要件案、MVP、技術選択肢、マクロ書き込みアルゴリズム |
 | `data/famimimidi_spec.json` | 全CC・PC・SysEx・ノートマップの機械可読定義 |
 | `data/patches.json` | これまでに作った音色とドラムキット定義 |

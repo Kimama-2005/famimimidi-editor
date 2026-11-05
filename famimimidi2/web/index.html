@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ja" data-theme="rpg">
+<head>
+<meta charset="utf-8">
+<title>FAMIMIMIDI SOUND EDITOR</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="icon.png">
+</head>
+<body>
+<div class="app">
+  <!-- 上の帯 -->
+  <div class="top win">
+    <span class="logo"><img src="icon.png" alt="">FAMIMIMIDI SOUND EDITOR</span>
+    <span class="status ng clickable" id="status" title="押すと接続の小窓">未接続</span>
+    <span class="spacer"></span>
+    <button class="btn" id="btnVfc" title="ふぁみみみっでぃが無くても、このパソコンの音で試す(押すたびに切り替え)。カートリッジへの書き込みと実機の確認はできません">🎮 仮想ファミコン</button>
+    <button class="btn" id="btnCart" title="保存場所に音色を入れる・電源を入れたときの音色・整える">★ カートリッジ</button>
+    <button class="btn" id="btnCheck" title="アプリが音を鳴らして、鳴ったかどうかをボタンで答える確認">✓ 実機の確認</button>
+    <button class="btn danger" id="btnPanic" title="鳴っている音を全部止める(CC#123 → CC#120)">■ パニック</button>
+    <button class="btn" id="btnSettings" title="テーマ・ch のずれ・クレジット">⚙</button>
+  </div>
+
+  <!-- いまの演奏セットとタブ -->
+  <div class="tabsbar">
+    <div class="sethead">
+      <span class="note">いまの演奏セット</span>
+      <span class="setname" id="setName">(名前なし)</span>
+      <span class="dirty" id="setDirty" hidden>変更あり</span>
+      <button class="btn mini" id="btnResend" title="5ch 分の音色をふぁみみみっでぃへ送り直す">↻ 送り直す</button>
+      <span class="spacer"></span>
+      <span class="note">接続したときに自動で送っています</span>
+    </div>
+    <div class="tabrow" id="tabs">
+      <span class="tab play libtab" data-p="play">♪ 演奏セット</span>
+      <span class="tab" data-p="1"><i class="dot" style="background:var(--c1)"></i>1 パルス</span>
+      <span class="link" id="link12" title="紐付け: ch2 も ch1 の音色で鳴らす。外すと ch2 の音色が戻る">🔗</span>
+      <span class="tab" data-p="2"><i class="dot" style="background:var(--c2)"></i>2 パルス</span>
+      <span class="tab" data-p="3"><i class="dot" style="background:var(--c3)"></i>3 三角波</span>
+      <span class="tab" data-p="4"><i class="dot" style="background:var(--c4)"></i>4 ノイズ</span>
+      <span class="tab" data-p="5"><i class="dot" style="background:var(--c5)"></i>5 DPCM/波形</span>
+    </div>
+  </div>
+
+  <!-- 左: 開いているタブのライブラリ -->
+  <div class="side win" id="side">
+    <h2 id="sideTitle">演奏セット</h2>
+    <input type="text" class="search" id="sideSearch" placeholder="さがす">
+    <ul class="list" id="sideList"></ul>
+    <div class="libbtns" id="sideBtns"></div>
+    <div class="note libinfo" id="sideInfo"></div>
+  </div>
+
+  <!-- 中央 -->
+  <div class="main">
+    <!-- ===== ♪ 演奏セット(演奏する場所) ===== -->
+    <div class="page" id="p-play">
+      <div class="win how">
+        <span class="note">弾き方</span>
+        <span class="seg" id="howSeg"><button data-h="map">🎹 割り当て表で弾く</button><button data-h="chord">🎸 コードで弾く</button></span>
+        <span class="keyhelp"><kbd>スペース</kbd> でも切り替え</span>
+      </div>
+      <div id="howMap" class="cheditor">
+        <div class="win">
+          <h2>鍵盤の割り当て<span class="help" data-tip="外の鍵盤のどの鍵を、どの ch で鳴らすか。&#10;帯の両端をつまむと鍵域が変わり、真ん中をつまむと動きます。帯の右の − / ＋ でオクターブ。✕ でその ch を使わない(下の行に移ります)。&#10;1つの鍵は、帯が重なっているすべての ch で鳴ります。&#10;割り当て表はカートリッジには保存できません(このアプリが振り分けます)。">?</span></h2>
+          <div class="bandkb">
+            <div class="bands" id="bands"></div>
+            <div class="minikb" id="minikb"></div>
+          </div>
+          <div class="unused" id="unused"></div>
+          <div class="pairpick" id="pairPick">
+            <span class="note">ch1 と ch2</span>
+            <span class="opt" data-pair="off">ch1 のみ</span><span class="opt" data-pair="poly">ポリ(2音)</span><span class="opt" data-pair="layer">ユニゾン(重ねる)</span>
+            <span class="help" data-tip="ch1 のみ = ch2 は別の帯で使う(または使わない)&#10;ポリ(2音)= ch1 の鍵域を ch1・ch2 に1音ずつ。同時に2音まで(3音目は一番古い音を止める)。音色をそろえるため 🔗 で自動で紐付けます&#10;ユニゾン(重ねる)= ch1 の鍵域を ch1・ch2 の両方で鳴らす。🔗 を外して ch2 のデチューンを変えると厚みが出ます">?</span>
+          </div>
+        </div>
+        <div class="win">
+          <h2>ひな形</h2>
+          <div class="tpls" id="tpls"></div>
+        </div>
+      </div>
+      <div id="howChord" class="cheditor" hidden>
+        <div class="win">
+          <div class="chordtop">
+            <span class="note">いまのコード</span><span class="chordnow" id="chordNow">―</span>
+            <span class="note">次</span><span class="chordnext" id="chordNext">―</span>
+            <span class="spacer"></span>
+            <span class="note">キー</span>
+            <span class="seg"><button id="keyDown" title="半音下げる(↓)">−</button><button class="on" id="keyName">C</button><button id="keyUp" title="半音上げる(↑)">＋</button></span>
+            <button class="btn" id="btnHold" title="離してもコードを鳴らし続ける(H)">ホールド</button>
+            <button class="btn" id="btnStop" title="すぐ止める(Esc)">止める</button>
+          </div>
+          <div class="chordcols">
+            <div>
+              <div class="note">曲</div>
+              <ul class="list chordsongs" id="songList"></ul>
+              <button class="btn mini" id="btnSongEdit">曲を編集・取り込み…</button>
+            </div>
+            <div>
+              <div class="inline">
+                <span class="note">鍵盤の配置</span>
+                <span class="seg" id="layoutSeg"></span>
+                <span class="help" data-tip="オタマ互換 = オタマコードと同じ並び(1段目 基本の3和音、2段目 4和音、3段目 この曲のほかのコード)&#10;規則性重視 = どの段も「鍵の名前 = コードのルート」。1段目 3和音、2段目 4和音、3段目 ほかのコードをルートの位置に&#10;弾きやすさ重視 = この曲でよく使うコードを白鍵の真ん中に、続けて弾くコードどうしを近くに置く&#10;どれも C3〜B5 の36鍵に収めます。入りきらないときだけ C2〜B2 を使います。">?</span>
+              </div>
+              <div class="chordgrid2" id="chordGrid"></div>
+              <div class="note">進行</div>
+              <div class="chordprog" id="chordProg"></div>
+              <div class="note" id="chordWarn"></div>
+            </div>
+          </div>
+          <div class="keyhelp"><kbd>←</kbd><kbd>→</kbd> 曲 <kbd>↑</kbd><kbd>↓</kbd> 移調 <kbd>H</kbd> ホールド <kbd>Esc</kbd> 止める <kbd>スペース</kbd> コードで弾く ON/OFF</div>
+        </div>
+        <div class="win">
+          <h2>ボイシング<span class="help" data-tip="コードの構成音を、どの ch で鳴らすか。&#10;4声 = ベース(ch3 三角波)+ ボイス1・2(ch1・ch2 パルス)+ ボイス3(ch5 波形メモリ)。大事な2音をパルスに、3番目を波形メモリに入れます(波形メモリを音量0にしてもコードに聞こえる)&#10;アルペジエーター = 構成音を全部 ch1 に送り、ふぁみみみっでぃのアルペジエーターで鳴らす。ch3 はベース">?</span></h2>
+          <div class="inline"><span class="seg" id="methodSeg"><button data-v="split">4声</button><button data-v="arp">アルペジエーター</button></span>
+            <span class="hint2" id="methodHint"></span></div>
+          <div class="voices" id="voices"></div>
+          <div class="hint2">ボイスへの割り振り順: 3rd → 7th → ♭5/#5 → 6th → テンション → 5th → ルート</div>
+        </div>
+        <div class="win">
+          <h2>奏法プリセット<span class="help" data-tip="コードの鳴らし方のひな形。細かい数値(ずらしの順・余韻・揺らぎ・打ち直し)はプリセットにまとめてあります。好みで変えられるのはストラム幅(声をずらして入れる幅)だけです。">?</span></h2>
+          <div class="styles" id="styles"></div>
+          <div class="ctl spread"><span class="note">ストラム幅</span><span class="end">0ms</span><input type="range" id="spread" min="0" max="500"><span class="end">500ms</span><span class="num" id="spreadNum"></span></div>
+        </div>
+      </div>
+      <div class="win">
+        <h2>ペダル・レバー<span class="help" data-tip="外の鍵盤のサスティンペダル・ピッチベンド・モジュレーションを、この演奏セットでどこへどう効かせるか。&#10;番号 = 送る ch(押して切り替え)。ひな形や割り当て表を変えると、メロディの ch に自動で付け直します。">?</span></h2>
+        <div id="ctlRows"></div>
+      </div>
+      <div class="win">
+        <h2>この演奏セットの音色</h2>
+        <div class="chlist" id="chList"></div>
+      </div>
+    </div>
+
+    <!-- ===== 1〜5(音色をつくる場所) ===== -->
+    <div class="page" id="p-tone">
+      <div class="win toneh">
+        <span class="note" id="toneCh">1 パルス</span>
+        <span class="tonename" id="toneName">(既定値)</span>
+        <span class="note" id="linkNote"></span>
+        <span class="spacer"></span>
+        <span class="note">← 左の一覧から音色を選べます</span>
+        <button class="btn" id="btnReset" title="全部の項目を電源 ON のときの値に戻して送る">初期化</button>
+      </div>
+      <div class="easy" id="cards"></div>
+    </div>
+  </div>
+
+  <!-- 下: 鍵盤とログ -->
+  <div class="bottom">
+    <div class="win kbwrap">
+      <div class="kbbar">
+        <span class="note">鍵盤</span>
+        <span class="kbstate" id="kbState"></span>
+        <span class="kbfollow" id="kbFollow"><span class="note">外部の鍵盤</span><span class="seg" id="kbFollowSeg"><button data-v="0">この ch だけ</button><button data-v="1">演奏セットどおり</button></span><span class="help" data-tip="1〜5 のタブで外部の鍵盤をどう鳴らすか。「演奏セットどおり」にすると、♪ のタブと同じ割り当て表(またはコードモード)のまま音作りができます。画面の鍵盤は、いつもそのタブの ch だけを鳴らします。">?</span></span>
+        <span class="spacer"></span>
+        <span class="note">強さ</span>
+        <input type="range" id="vel" value="100" min="8" max="127">
+        <span class="num" id="velNum">100</span>
+      </div>
+      <div class="kb" id="kb"></div>
+    </div>
+    <div class="win logwrap" id="logWin">
+      <h2 class="clickable" id="logHead">送信ログ ▾</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 接続の小窓 -->
+<div class="overlay" id="ovConnect">
+  <div class="win modalwin">
+    <span class="close" data-close>✕</span>
+    <h2>接続</h2>
+    <div class="field"><label for="outSel">出力(ふぁみみみっでぃ)</label><select id="outSel"></select></div>
+    <div class="field"><label for="inSel">入力(鍵盤)</label><select id="inSel"></select></div>
+    <div class="note">つながらないときは、Domino・Cubase を閉じてからもう一度押してください(1つのポートを1つのソフトしか使えないことがあります)。</div>
+    <div class="btns">
+      <button class="btn" id="btnRefresh">一覧を更新</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btnDisconnect">切断</button>
+      <button class="btn main" id="btnConnect">接続</button>
+    </div>
+  </div>
+</div>
+
+<!-- ⚙ 設定 -->
+<div class="overlay" id="ovSettings">
+  <div class="win modalwin">
+    <span class="close" data-close>✕</span>
+    <h2>テーマ・ch のずれ</h2>
+    <div class="field"><label>テーマ</label><span class="seg" id="themeSeg"></span></div>
+    <div class="field"><label>ch のずれ<span class="help" data-tip="ファミコンの電源を入れるときにボタンを押していると、ふぁみみみっでぃの ch が 6〜10 や 11〜15 にずれます。そのときに合わせます。">?</span></label><span class="seg" id="offsetSeg"></span></div>
+    <div class="credit note">ふぁみみみっでぃ: へけけくん さん(@hekekekun)/ http://famimimidi.dojin.com<br>
+      このソフトは非公式です(ふぁみみみっでぃに MIDI を送るだけのアプリ)。フォント: DotGothic16(Fontworks、OFL)。<br>
+      作: Kimama + Claude Code(Anthropic)。MIT ライセンス</div>
+  </div>
+</div>
+
+<!-- 名前を入れる・確かめる -->
+<div class="overlay" id="ovAsk">
+  <div class="win modalwin">
+    <h2 id="askTitle"></h2>
+    <div class="note" id="askText"></div>
+    <input type="text" id="askInput">
+    <div class="btns">
+      <span class="spacer"></span>
+      <button class="btn" id="askNo">やめる</button>
+      <button class="btn main" id="askYes">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- 曲を編集・取り込み -->
+<div class="overlay" id="ovSong">
+  <div class="win modalwin songwin">
+    <span class="close" data-close>✕</span>
+    <h2>曲を編集・取り込み(全部の演奏セットで共通)</h2>
+    <div class="field"><label for="songSel">曲</label><select id="songSel"></select></div>
+    <div class="field"><label for="songName">曲名</label><input type="text" id="songName"></div>
+    <div class="field"><label for="songKey">キー</label><select id="songKey"></select></div>
+    <div class="note">コード進行(コード名を空白・| ・改行で区切る)</div>
+    <textarea id="songText" rows="9"></textarea>
+    <div class="note" id="songErr"></div>
+    <div class="btns">
+      <button class="btn" id="btnWiki" title="ChordWiki のページを「名前を付けて保存」した .html から、この曲にコード進行を取り込む(歌詞は取り込みません)">ChordWiki から…</button>
+      <span class="spacer"></span>
+      <button class="btn main" id="btnSongSave">この曲を保存</button>
+    </div>
+    <h3 class="subh">全曲共通のコード(4段目・キー C で書く)</h3>
+    <div class="chordcommon" id="commonRow"></div>
+    <div class="btns">
+      <button class="btn" id="btnBookImport" title="OtamaChord Studio のコードセット(.json)を取り込む。12曲まるごと置き換わります">コードセットを取り込む…</button>
+      <button class="btn" id="btnBookExport" title="オタマでも読める形の .json に書き出す">書き出す…</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btnCommonSave">共通のコードを保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ★ カートリッジ -->
+<div class="overlay" id="ovCart">
+  <div class="win cartwin">
+    <span class="close" data-close>✕</span>
+    <h2>カートリッジ<span class="help" data-tip="ふぁみみみっでぃに音色をしまう画面です。&#10;保存場所(1〜40)に入れた音色は、呼び出し番号(89〜128)を送ると呼び出せます。電源を切っても残ります。&#10;カートリッジの中身は読み出せないので、ここに出ているのは、このアプリが書いた記録(控え)です。&#10;書き込む前に、必ず確認の画面が出ます。">?</span></h2>
+    <div class="cartbody">
+      <div>
+        <div class="note">保存場所 1〜40(下の数字は呼び出し番号 89〜128)</div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+      <div>
+        <div class="placehead" id="placeHead">保存場所を選んでください</div>
+        <div class="note" id="placeInfo"></div>
+        <div class="field2"><label for="placeCh">入れる音色</label><select id="placeCh"></select></div>
+        <div class="libbtns" style="grid-template-columns:1fr">
+          <button class="btn" id="btnPlaceSave">いまの音色を入れる…</button>
+          <button class="btn" id="btnPlaceCall" title="呼び出し番号を送って C4 を鳴らす(作業中の音色とずれるので、あとで「送り直す」)">呼び出して鳴らす</button>
+          <button class="btn" id="btnPlaceClear">空にする…</button>
+        </div>
+        <h3 class="subh">演奏セットまるごと</h3>
+        <div class="libbtns" style="grid-template-columns:1fr">
+          <button class="btn" id="btnPerfPlaces" title="演奏セットの音色を、選んだ保存場所から順に空いている場所へ入れる">5つの音色を保存場所に入れる…</button>
+          <button class="btn" id="btnPerfStartup">電源を入れたときの音色にする…</button>
+        </div>
+        <h3 class="subh">電源を入れたときの音色</h3>
+        <div id="startupRows"></div>
+        <h3 class="subh">整える<span class="help" data-tip="同じ ch の音色どうしで呼び出しを切り替えても、前の音色の設定が残らないように、保存場所を入れ直します。&#10;どの音色にも共通の設定は「土台」として、電源を入れたときに入るようにします。">?</span></h3>
+        <div id="tidyRows"></div>
+        <div class="note" style="margin-top:8px">書き込む前に、必ず確認の画面が出ます。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 書き込みの確認 -->
+<div class="overlay" id="ovConfirm">
+  <div class="win modalwin">
+    <h2 class="danger" id="cfTitle"></h2>
+    <div class="lines" id="cfLines"></div>
+    <div class="note" id="cfTime"></div>
+    <label class="check"><input type="checkbox" id="cfAgree"> 元に戻せないことを分かったうえで書き込みます</label>
+    <div class="note"><a href="#" id="cfShow">送る内容を見る</a></div>
+    <pre id="cfDetail"></pre>
+    <div class="btns"><span class="spacer"></span><button class="btn" id="cfNo">やめる</button><button class="btn danger" id="cfYes" disabled>書き込む</button></div>
+  </div>
+</div>
+
+<!-- 書き込み中 -->
+<div class="overlay" id="ovWrite">
+  <div class="win writewin">
+    <h2 class="danger" id="wrTitle">カートリッジに書き込み中</h2>
+    <div>ファミコンの電源を切らないでください。ほかの送信は止めています。</div>
+    <div class="bar"><div id="wrBar"></div></div>
+    <div class="note" id="wrText"></div>
+    <div class="btns"><span class="spacer"></span><button class="btn" id="wrClose" hidden>閉じる</button></div>
+  </div>
+</div>
+
+<!-- 波形の登録先 -->
+<div class="overlay" id="ovWave">
+  <div class="win modalwin">
+    <span class="close" data-close>✕</span>
+    <h2>波形をカートリッジに登録</h2>
+    <div class="field"><label for="waveSlot">登録先</label><select id="waveSlot"></select></div>
+    <div class="field"><label for="waveName">名前(控え用)</label><input type="text" id="waveName"></div>
+    <div class="btns"><span class="spacer"></span><button class="btn main" id="btnWaveNext">次へ(確認)</button></div>
+  </div>
+</div>
+
+<!-- ✓ 実機の確認 -->
+<div class="overlay" id="ovCheck">
+  <div class="win checkwin">
+    <span class="close" id="ckClose">✕</span>
+    <h2 id="ckTitle">実機の確認</h2>
+    <div id="ckBody"></div>
+    <div id="ckRun" hidden>
+      <div class="steps" id="ckSteps"></div>
+      <div class="note" id="ckText"></div>
+      <div class="q" id="ckQ"></div>
+      <div class="bigbtns" id="ckButtons"><button class="btn main" id="ckYes">🔊 鳴った</button><button class="btn" id="ckNo">🔇 鳴らない</button></div>
+      <div class="btns ckbtns"><button class="btn" id="ckAgain">もう一度鳴らす</button><button class="btn" id="ckStop">やめる(設定は元に戻します)</button></div>
+      <div class="note">答えは自動で記録されます。音量などの設定はアプリが変えて、終わったら戻します。</div>
+    </div>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div id="toast"></div>
+<script src="app.js"></script>
+<script src="tone.js"></script>
+<script src="play.js"></script>
+<script src="chord.js"></script>
+<script src="cart.js"></script>
+<script src="check.js"></script>
+<script src="vfc.js"></script>
+</body>
+</html>

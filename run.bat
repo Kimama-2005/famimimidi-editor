@@ -59,7 +59,7 @@ if not defined PY (
   set "PY=%LOCALVENV%\Scripts\python.exe"
 )
 
-"%PY%" -m famimimidi.webapp
+"%PY%" -m famimimidi2
 if errorlevel 1 pause
 exit /b
 

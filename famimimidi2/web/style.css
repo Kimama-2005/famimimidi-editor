@@ -1,0 +1,497 @@
+/* FAMIMIMIDI SOUND EDITOR — 見た目はゲーム画面風、操作は現代的に。
+   テーマは色の変数だけを切り替える(A: rpg / B: console / C: crt)。 */
+@font-face { font-family: "DotGothic16"; src: url("fonts/DotGothic16-Regular.ttf") format("truetype"); }
+
+:root, [data-theme="rpg"] {
+  --bg: #000; --panel: #000; --ink: #fcfcfc; --sub: #a4a4a4; --line: #fcfcfc;
+  --accent: #f8b800; --accent2: #3cbcfc; --danger: #d82800; --ok: #58d854;
+  --graph: #0000bc; --key: #fcfcfc; --keyb: #000; --frame: double 6px var(--line); --radius: 10px;
+  --glow: none;
+}
+[data-theme="console"] {
+  --bg: #e8dcc0; --panel: #1c1c1c; --ink: #f8f8f8; --sub: #b8b0a0; --line: #8c1c18;
+  --accent: #d8a038; --accent2: #f8f8f8; --danger: #8c1c18; --ok: #6cc86c;
+  --graph: #2a2a2a; --key: #f8f8f8; --keyb: #1c1c1c; --frame: solid 6px var(--line); --radius: 6px;
+  --glow: none;
+}
+[data-theme="crt"] {
+  --bg: #07070d; --panel: #0d0d18; --ink: #d8f8ff; --sub: #6c8898; --line: #3cbcfc;
+  --accent: #fc74b4; --accent2: #3cbcfc; --danger: #f83800; --ok: #b8f818;
+  --graph: #06101c; --key: #d8f8ff; --keyb: #07070d; --frame: solid 2px var(--line); --radius: 4px;
+  --glow: 0 0 12px rgba(60, 188, 252, .35);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); overflow: hidden;
+       font: 15px/1.5 "DotGothic16", "MS Gothic", monospace; letter-spacing: .5px; user-select: none; }
+[data-theme="crt"] body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px); }
+button, select, input { font: inherit; color: inherit; }
+
+/* ---------- 枠(ウィンドウ) ---------- */
+.win { background: var(--panel); border: var(--frame); border-radius: var(--radius); padding: 10px 14px;
+       box-shadow: var(--glow); min-width: 0; }
+.win > h2 { margin: -2px 0 8px; font-size: 14px; font-weight: normal; color: var(--accent); letter-spacing: 2px; }
+
+/* ---------- 全体の配置 ---------- */
+.app { display: grid; grid-template-columns: 260px 1fr; grid-template-rows: auto 1fr 190px; gap: 12px;
+       height: 100vh; padding: 12px; }
+.top { grid-column: 1 / 3; display: flex; align-items: center; gap: 14px; }
+.side { grid-row: 2 / 3; overflow: auto; }
+.main { grid-row: 2 / 3; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: auto; padding-right: 4px; }
+.bottom { grid-column: 1 / 3; display: grid; grid-template-columns: 1fr 520px; gap: 12px; min-height: 0; }
+
+/* ---------- 上の帯 ---------- */
+.logo { font-size: 20px; color: var(--accent); letter-spacing: 3px; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+.logo img { width: 28px; height: 28px; image-rendering: pixelated; }
+.status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status.ok { color: var(--ok); }
+.status.ng { color: var(--danger); }
+.status::before { content: "● "; }
+.spacer { flex: 1; }
+
+.btn { background: transparent; border: 2px solid var(--line); border-radius: 4px; padding: 5px 12px; cursor: pointer;
+       white-space: nowrap; }
+.btn:hover { background: var(--line); color: var(--panel); }
+.btn:active { transform: translate(1px, 1px); }
+.btn.main { background: var(--accent); color: #000; border-color: var(--accent); }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn[disabled] { opacity: .35; pointer-events: none; }
+
+/* ---------- タブ ---------- */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { padding: 5px 14px; border: 2px solid var(--line); border-radius: 4px 4px 0 0; cursor: pointer; color: var(--sub); }
+.tab:hover { color: var(--ink); }
+.tab.on { color: #000; background: var(--accent); border-color: var(--accent); }
+
+/* ---------- 入力部品 ---------- */
+.field { display: grid; grid-template-columns: 210px 1fr; align-items: center; gap: 8px; margin: 6px 0; }
+.field > label { color: var(--sub); }
+.inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+select, input[type=text] { background: var(--panel); border: 1px solid var(--sub); border-radius: 3px; padding: 4px 8px; }
+select:focus, input:focus { outline: 2px solid var(--accent); }
+.radios { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.radios label, .check { cursor: pointer; }
+input[type=radio], input[type=checkbox] { accent-color: var(--accent); }
+.note { color: var(--sub); font-size: 13px; }
+
+/* 「?」の説明 */
+.help { display: inline-block; width: 17px; height: 17px; line-height: 17px; text-align: center; border-radius: 50%;
+        background: var(--accent2); color: #000; font-size: 11px; cursor: help; margin-left: 6px; position: relative;
+        vertical-align: 1px; }
+/* 説明の吹き出し(1枚を画面の一番手前に出し、画面に収まる位置へ。app.js の showTip) */
+#tip { position: fixed; z-index: 100; display: none; max-width: 300px; background: #fffbe6; color: #222; padding: 7px 9px;
+       border-radius: 4px; font-size: 13px; line-height: 1.55; white-space: pre-line; text-align: left; letter-spacing: 0;
+       box-shadow: 0 2px 8px rgba(0,0,0,.4); pointer-events: none; }
+
+/* ---------- ライブラリ ---------- */
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { padding: 4px 6px 4px 20px; border-radius: 3px; cursor: pointer; position: relative; }
+.list li:hover { background: rgba(255, 255, 255, .08); }
+.list li.sel::before { content: "▶"; position: absolute; left: 3px; color: var(--accent); animation: blink 1s steps(1) infinite; }
+.list li small { color: var(--sub); float: right; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---------- 鍵盤 ---------- */
+.kbwrap { display: flex; flex-direction: column; min-height: 0; }
+.kb { position: relative; flex: 1; display: flex; min-height: 60px; touch-action: none; }
+.kb .w { flex: 1; background: var(--key); border: 1px solid var(--keyb); border-radius: 0 0 4px 4px; position: relative; }
+.kb .w span { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 10px; color: #666; }
+.kb .b { position: absolute; top: 0; height: 58%; background: var(--keyb); border: 1px solid var(--key); z-index: 2; }
+.kb .down { background: var(--accent) !important; }
+.kb .out { opacity: .3; }
+.kbbar { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-bottom: 6px; }
+#playChip { max-width: 136px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#chordChip { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 送信ログ ---------- */
+.log { font: 12px/1.45 "MS Gothic", monospace; color: var(--ok); overflow: auto; white-space: pre; user-select: text;
+       flex: 1; min-height: 0; }
+.logwrap { display: flex; flex-direction: column; min-height: 0; }
+.log .blocked { color: var(--danger); }
+.log .note { color: var(--sub); font-size: 12px; }
+
+/* ---------- お知らせ ---------- */
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 40; display: none;
+         background: var(--panel); border: var(--frame); border-radius: var(--radius); padding: 10px 18px; max-width: 70vw;
+         white-space: pre-line; }
+#toast.danger { border-color: var(--danger); color: #fff; background: var(--danger); }
+.placeholder { color: var(--sub); border: 1px dashed var(--sub); border-radius: 4px; padding: 16px; text-align: center; }
+
+/* ---------- 接続と設定の引き出し ---------- */
+.drawer { position: fixed; top: 84px; right: 12px; width: 760px; max-width: calc(100vw - 24px); z-index: 30; display: none; }
+.drawer.open { display: block; }
+.drawer .win { box-shadow: 0 8px 24px rgba(0, 0, 0, .6), var(--glow); max-height: calc(100vh - 100px); overflow: auto; }
+.credit { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--sub); font-size: 12px; line-height: 1.6; }
+.cheditor { display: flex; flex-direction: column; gap: 12px; }
+.chordview { position: relative; }
+.chordtitle { margin-top: 0; }
+.tab.chordtab { margin-left: 10px; }
+.kb .w em, .kb .b em { position: absolute; left: 0; right: 0; font-style: normal; text-align: center; font-size: 10px;
+                       line-height: 1.1; overflow: hidden; pointer-events: none; }
+.kb .w em { bottom: 16px; color: #333; word-break: break-all; }
+.kb .b em { bottom: 3px; color: #ddd; font-size: 9px; }
+.kb .next { box-shadow: inset 0 0 0 3px var(--accent); animation: kbnext 0.8s steps(2) infinite; }
+.kb .w.next { background: #fff3c4; }
+.kb .b.next { background: #7a5a00; }
+.kb .cur { background: var(--ok) !important; }
+@keyframes kbnext { 50% { box-shadow: inset 0 0 0 3px transparent; } }
+.chordtop { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.chordnow { font-size: 22px; color: var(--accent); }
+#chordToggle.on, #chordChip.on { background: var(--accent); color: var(--panel); }
+.chordbody { display: grid; grid-template-columns: 190px minmax(0, 1fr) 270px; gap: 12px; }
+.chordsongs .list li { font-size: 13px; }
+.chordedit textarea { width: 100%; box-sizing: border-box; font-family: inherit; }
+.chordprog { display: flex; flex-wrap: wrap; gap: 4px; min-height: 30px; font-size: 13px; }
+.chordprog span { border: 1px solid var(--sub); border-radius: 3px; padding: 1px 6px; cursor: pointer; }
+.chordprog span small { color: var(--sub); margin-left: 4px; }
+.chordprog span.cur { background: var(--ok); color: var(--panel); }
+.chordprog span.next { border: 2px solid var(--accent); }
+.chordprog span.none { border-style: dashed; color: var(--danger); }
+.chordgrid { display: grid; grid-template-columns: 84px repeat(12, minmax(0, 1fr)); gap: 3px; font-size: 12px; }
+.chordgrid .rowh { color: var(--sub); align-self: center; font-size: 11px; line-height: 1.2; }
+.chordgrid .cell { border: 1px solid var(--sub); border-radius: 3px; min-height: 34px; padding: 2px; text-align: center;
+                   cursor: pointer; line-height: 1.2; overflow: hidden; touch-action: none; }
+.chordgrid .cell.black { background: rgba(255, 255, 255, .06); }
+.chordgrid .cell.cur { background: var(--accent); color: var(--panel); }
+.chordgrid .cell.used { border-color: var(--ink); }
+.chordgrid .cell small { display: block; color: var(--sub); font-size: 10px; }
+.chordgrid .cell.cur small { color: var(--panel); }
+.chordgrid .cell.fn { cursor: default; color: var(--sub); font-size: 11px; white-space: nowrap; }
+.chordcommon { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 6px; }
+.chordcommon input { width: 100%; box-sizing: border-box; }
+.chordset .field2 { grid-template-columns: 96px minmax(0, 1fr) auto; }
+.chordset select, .chordset input[type=range] { max-width: 100%; min-width: 0; }
+.maptable { border-collapse: collapse; margin: 2px 0 8px 16px; font-size: 14px; white-space: nowrap; }
+.maptable th { color: var(--sub); font-weight: normal; text-align: left; padding: 0 8px 2px 0; }
+.maptable td { padding: 2px 8px 2px 0; }
+.maptable tr.off td:not(:first-child):not(:nth-child(2)) { opacity: .35; }
+.maptable select { max-width: 120px; }
+
+/* ---------- 音色エディタの道具帯 ---------- */
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; }
+.loaded { color: var(--accent); }
+.sep { width: 1px; height: 22px; background: var(--sub); opacity: .5; margin: 0 4px; }
+.seg { display: inline-flex; border: 2px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 4px 12px; cursor: pointer; color: var(--sub); white-space: nowrap; }
+.seg button.on { background: var(--line); color: var(--panel); }
+.presetDesc { min-height: 1.2em; margin: -6px 4px 0; }
+
+/* ---------- かんたん表示 ---------- */
+.easy { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 12px; align-items: start; }
+.easy .wide { grid-column: 1 / -1; }
+.card h2 { display: flex; align-items: center; }
+.card h2 .sw { margin-left: auto; }
+.card.off .row:not(.always) { display: none; }
+.row { display: grid; grid-template-columns: 200px 1fr; align-items: center; gap: 8px; margin: 5px 0; }
+.row > .name { color: var(--sub); line-height: 1.3; }   /* 長い名前は切らずに折り返す */
+.ctl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ctl input[type=range] { flex: 1; min-width: 80px; accent-color: var(--accent); }
+.ctl .end { color: var(--sub); font-size: 12px; white-space: nowrap; }
+.ctl .num { min-width: 3.5em; text-align: right; color: var(--ink); }
+.ctl .seg button { padding: 3px 9px; }
+.sw { width: 46px; height: 24px; border-radius: 12px; background: var(--sub); position: relative; cursor: pointer; flex: none; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: .15s; }
+.sw.on { background: var(--ok); }
+.sw.on::after { left: 25px; }
+
+/* エンベロープのグラフ */
+svg.env { width: 100%; height: 200px; background: var(--graph); border-radius: 4px; touch-action: none; display: block; }
+.env .curve { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linejoin: round; }
+.env .fill { fill: var(--accent); opacity: .15; }
+.env .h { fill: var(--ink); stroke: var(--accent); stroke-width: 3; cursor: grab; }
+.env .h:hover, .env .h.drag { r: 10; }
+.env .h.dim { opacity: .35; }
+.env text { fill: var(--sub); font: 12px "DotGothic16", monospace; }
+.env .gl { stroke: var(--sub); stroke-opacity: .25; }
+.envvals { display: flex; gap: 18px; color: var(--sub); margin-top: 6px; flex-wrap: wrap; }
+.envvals b { color: var(--ink); font-weight: normal; }
+
+/* デューティの絵 */
+.duty { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.duty .pic { border: 2px solid var(--sub); border-radius: 4px; padding: 6px 4px; text-align: center; cursor: pointer; }
+.duty .pic:hover { border-color: var(--ink); }
+.duty .pic.on { border-color: var(--accent); background: rgba(248, 184, 0, .12); }
+.duty svg { width: 100%; height: 38px; }
+.duty path { fill: none; stroke: var(--ink); stroke-width: 3; }
+.duty small { display: block; color: var(--sub); font-size: 12px; line-height: 1.3; }
+
+/* 詳細表示 */
+.detail table { width: 100%; border-collapse: collapse; }
+.detail td { padding: 3px 6px; border-bottom: 1px solid rgba(255, 255, 255, .08); vertical-align: middle; }
+.detail td.cc { color: var(--sub); width: 60px; }
+.detail td.hint { color: var(--sub); font-size: 12px; }
+.detail input[type=range] { width: 260px; accent-color: var(--accent); }
+
+/* ---------- ライブラリ ---------- */
+.side { display: flex; flex-direction: column; min-height: 0; }
+.side .list { flex: 1; overflow: auto; min-height: 80px; }
+.search { width: 100%; margin-bottom: 6px; }
+.libbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; }
+.libbtns .btn { padding: 4px 6px; font-size: 13px; }
+.libkind { display: flex; margin-bottom: 6px; }
+.libkind button { flex: 1; }
+.list li.cur { color: var(--accent); }
+.libinfo { max-height: 150px; overflow: auto; margin-top: 6px; white-space: pre-line; }
+
+/* ---------- 重ねて出す画面 ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .7); z-index: 35; display: none;
+           align-items: center; justify-content: center; }
+.overlay.open { display: flex; }
+.cartwin { width: min(1180px, 96vw); max-height: 94vh; overflow: auto; position: relative; }
+.cartbody { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+.tiles { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.tile { border: 2px solid var(--sub); border-radius: 4px; padding: 4px 6px; cursor: pointer; min-height: 58px; font-size: 12px;
+        line-height: 1.3; overflow: hidden; }
+.tile b { display: block; color: var(--sub); font-weight: normal; }
+.tile.filled { border-color: var(--ink); }
+.tile.filled b { color: var(--accent); }
+.tile.sel { outline: 3px solid var(--accent); outline-offset: 1px; }
+.tile:hover { background: rgba(255, 255, 255, .08); }
+.placehead { font-size: 18px; color: var(--accent); }
+.field2 { display: grid; grid-template-columns: 90px 1fr auto; gap: 6px; align-items: center; margin: 8px 0; }
+.cartrows { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+.srow { display: grid; grid-template-columns: 40px 1fr; gap: 6px; align-items: center; margin: 4px 0; }
+.srow .ops { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.srow .txt { grid-column: 2; font-size: 13px; }
+.srow .txt.warn { color: var(--accent); }
+.srow .txt.ok { color: var(--ok); }
+.srow .txt.none { color: var(--sub); }
+
+.modalwin { width: min(620px, 94vw); max-height: 90vh; overflow: auto; }
+.modalwin .lines div { margin: 3px 0; }
+.modalwin .lines .warn { color: var(--accent); }
+.modalwin pre { font: 12px/1.4 "MS Gothic", monospace; max-height: 240px; overflow: auto; background: rgba(255,255,255,.05);
+                padding: 6px; display: none; user-select: text; }
+.modalwin pre.open { display: block; }
+.modalwin .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; flex-wrap: wrap; }
+.modalwin .dangertext, h2.danger { color: var(--danger); }   /* 文字だけ赤くする(赤いボタンの文字まで赤くしない) */
+.modalwin input[type=text], .modalwin textarea { width: 100%; background: var(--panel); color: var(--ink);
+       border: 1px solid var(--sub); border-radius: 3px; padding: 4px 8px; font: inherit; }
+
+.writewin { width: min(520px, 94vw); }
+.writewin h2.danger { font-size: 18px; }
+.bar { height: 16px; border: 2px solid var(--line); border-radius: 3px; margin: 12px 0 6px; }
+.bar div { height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
+.srow select { max-width: 230px; }
+
+/* ---------- 道具の画面(波形メモリ・A/B・書き出し) ---------- */
+.toolwin { width: min(980px, 96vw); max-height: 94vh; overflow: auto; position: relative; }
+.toolwin.narrow { width: min(640px, 96vw); }
+.wavebody { display: grid; grid-template-columns: 384px 1fr; gap: 18px; }
+#waveSvg { width: 384px; height: 384px; background: #101010; border: 1px solid var(--sub); touch-action: none; cursor: crosshair; }
+#waveSvg .wbar { fill: var(--accent2); opacity: .55; }   /* .bar / .top はほかの部品の名前なので使わない */
+#waveSvg .wtop { fill: var(--accent); }
+.subh { font-size: 14px; font-weight: normal; color: var(--accent); letter-spacing: 2px; margin: 14px 0 6px; }
+#waveSvg line { stroke: #2a2a2a; }
+.presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.presets .btn { padding: 4px; font-size: 13px; }
+.abA { color: #f86868; }
+.abB { color: #68a8f8; }
+.abnow { font-size: 18px; margin-left: 8px; }
+.abtable { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.abtable th, .abtable td { text-align: left; padding: 3px 8px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.abtable tr.mute td { color: var(--sub); opacity: .5; }
+.btns .spacer { flex: 1; }
+
+/* ---------- 詳細な管理 ---------- */
+.toolwin.wide2 { width: min(1200px, 97vw); }
+#exTabs { margin-bottom: 10px; }
+.bigpc { font-size: 20px; color: var(--accent); min-width: 12em; }
+.pcgrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.pcgrid div { border: 1px solid var(--sub); border-radius: 3px; padding: 3px 5px; font-size: 12px; cursor: pointer; overflow: hidden;
+              white-space: nowrap; text-overflow: ellipsis; }
+.pcgrid div.sel { background: var(--accent); color: #000; border-color: var(--accent); }
+.pcgrid div.ng { border-color: var(--danger); }
+.tables2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-top: 10px; }
+.tables2 table { font-size: 13px; }
+.abtable tr.out td { opacity: .4; }
+.abtable tr.clickable { cursor: pointer; }
+.abtable tr.clickable:hover { background: rgba(255, 255, 255, .06); }
+.mini { padding: 1px 7px; font-size: 12px; }
+
+/* =====================================================================
+   作り直し版(SPEC_v2 7章、モックアップ .preview/mockup_v2.html で合意した形)
+   ===================================================================== */
+:root { --c1: #fc7460; --c2: #fca044; --c3: #3cbcfc; --c4: #b8b8b8; --c5: #58d854; }
+[hidden] { display: none !important; }
+.clickable { cursor: pointer; }
+.app { grid-template-rows: auto auto 1fr 190px; }
+.tabsbar { grid-column: 1 / 3; display: flex; flex-direction: column; gap: 6px; }
+.side, .main { grid-row: 3 / 4; }
+.side { border-top-left-radius: 0; }
+.sethead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.setname { font-size: 20px; color: var(--accent); }
+.dirty { color: var(--danger); font-size: 13px; }
+.dirty::before { content: "● "; }
+.tabrow { display: flex; align-items: flex-end; gap: 6px; flex-wrap: wrap; border-bottom: 2px solid var(--line); }
+.tabrow .tab { border-bottom: 0; }
+.tab .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 1px; }
+.tab.play { margin-right: 14px; }
+.tab.libtab { min-width: 236px; }
+.link { cursor: pointer; padding: 4px 4px 6px; color: var(--sub); font-size: 15px; opacity: .45; filter: grayscale(1); }
+.link.on { color: var(--accent); opacity: 1; filter: none; }
+.page { display: none; flex-direction: column; gap: 12px; }
+.page.on { display: flex; }
+.how { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.how .seg button { padding: 6px 18px; font-size: 16px; }
+.keyhelp { color: var(--sub); font-size: 12px; }
+.keyhelp kbd { border: 1px solid var(--sub); border-radius: 3px; padding: 0 4px; font: inherit; }
+.chlist { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.chlist div { border: 2px solid var(--sub); border-radius: 4px; padding: 6px 8px; cursor: pointer; font-size: 13px; min-width: 0;
+              overflow: hidden; text-overflow: ellipsis; }
+.chlist div:hover { background: rgba(255, 255, 255, .06); }
+.chlist b { display: block; font-weight: normal; font-size: 12px; }
+.chlist .sil { color: var(--danger); font-size: 11px; }
+.toneh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tonename { font-size: 18px; color: var(--accent); }
+.kbstate { color: var(--accent); font-size: 13px; }
+#vel { width: 120px; accent-color: var(--accent); }
+#sideBtns { display: flex; flex-wrap: wrap; gap: 4px; }
+#sideBtns .btn { flex: 1 1 calc(50% - 4px); }
+#sideBtns .btn.main { flex-basis: 100%; }
+.list li.cur::after { content: "♪"; position: absolute; right: 6px; color: var(--accent); }
+.list li.cur small { margin-right: 14px; }
+.logwrap.collapsed .log { display: none; }
+.kb .w.z { background: var(--zc); }
+.kb .b.z { background: color-mix(in srgb, var(--zc) 55%, #000); }
+.kb .w.zz { background: linear-gradient(var(--zc) 50%, var(--zc2) 50%); }
+.kb .b.zz { background: linear-gradient(color-mix(in srgb, var(--zc) 55%, #000) 50%, color-mix(in srgb, var(--zc2) 55%, #000) 50%); }
+.kb .silent { opacity: .3; }
+#askInput { width: 100%; margin-top: 8px; }
+.list li.head { cursor: default; padding-left: 6px; margin-top: 6px; }
+.list li.head:hover { background: none; }
+.wavebox { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.wavebox #waveSvg { width: 320px; height: 200px; background: #101010; border: 1px solid var(--sub); touch-action: none; cursor: crosshair; }
+.wavectl { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 6px; }
+.card.off > .wavebox, .card.off > .duty, .card.off > svg.env, .card.off > .envvals { display: none; }
+
+/* ---------- 割り当て表(色の帯) ---------- */
+.bandkb { position: relative; margin-top: 4px; }
+.bands { position: relative; }
+.band { position: absolute; height: 22px; border-radius: 4px; color: #000; font-size: 12px; padding: 2px 10px; white-space: nowrap;
+        cursor: grab; display: flex; align-items: center; gap: 6px; touch-action: none; overflow: hidden; }
+.band .edge { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; }
+.band .edge::after { content: ""; position: absolute; top: 4px; bottom: 4px; left: 2px; width: 4px; border-radius: 2px; background: rgba(0,0,0,.45); }
+.band .edge.l { left: 0; } .band .edge.r { right: 0; }
+.band .oct { margin-left: auto; display: inline-flex; gap: 2px; align-items: center; }
+.band .oct b { font-weight: normal; background: rgba(0,0,0,.18); border-radius: 3px; padding: 0 5px; }
+.band .oct i, .band .x { font-style: normal; cursor: pointer; padding: 0 4px; border-radius: 3px; }
+.band .oct i:hover, .band .x:hover { background: rgba(0,0,0,.25); }
+.minikb { display: flex; height: 56px; position: relative; }
+.minikb .w { flex: 1; background: var(--key); border: 1px solid var(--keyb); border-radius: 0 0 3px 3px; position: relative; }
+.minikb .w span { position: absolute; bottom: 2px; left: 0; right: 0; text-align: center; font-size: 9px; color: #666; }
+.minikb .b { position: absolute; top: 0; height: 58%; background: var(--keyb); border: 1px solid var(--key); z-index: 2; }
+.unused { margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-height: 28px; }
+.unused .chipbtn { border: 2px dashed var(--c); color: var(--c); border-radius: 4px; padding: 1px 8px; cursor: pointer; font-size: 12px; }
+.unused .chipbtn:hover { background: rgba(255,255,255,.08); }
+.pairpick { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.pairpick .opt { border: 2px solid var(--sub); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+.pairpick .opt.on { border-color: var(--accent); color: var(--accent); }
+.tpls { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.tpl { border: 2px solid var(--sub); border-radius: 4px; padding: 6px; cursor: pointer; font-size: 12px; text-align: center; }
+.tpl:hover { border-color: var(--ink); }
+.tpl.on { border-color: var(--accent); }
+.tpl .pic { display: flex; height: 14px; gap: 2px; margin-bottom: 4px; }
+.tpl .pic i { display: block; border-radius: 2px; flex: 1; }
+/* ---------- ペダル・レバー ---------- */
+.ctlrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
+.ctlrow .cname { width: 150px; color: var(--sub); }
+.chips { display: inline-flex; gap: 4px; }
+.chip { width: 26px; height: 26px; line-height: 22px; text-align: center; border: 2px solid var(--c); border-radius: 4px; cursor: pointer; color: var(--c); }
+.chip.on { background: var(--c); color: #000; }
+.chip.na { opacity: .25; pointer-events: none; }
+.hint2 { color: var(--sub); font-size: 12px; }
+
+/* ---------- コードモード ---------- */
+.chordnext { color: var(--accent); }
+.chordcols { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 12px; }
+.chordsongs { max-height: 260px; overflow: auto; margin-bottom: 6px; }
+.chordsongs li.empty { color: var(--sub); }
+.chordgrid2 { display: grid; grid-template-columns: 96px repeat(12, minmax(0, 1fr)); gap: 3px; font-size: 12px; margin: 6px 0; }
+.chordgrid2 .rowh { color: var(--sub); font-size: 11px; align-self: center; line-height: 1.2; }
+.chordgrid2 .cell { border: 1px solid var(--sub); border-radius: 3px; min-height: 34px; text-align: center; line-height: 1.2; padding: 2px;
+                    cursor: pointer; overflow: hidden; touch-action: none; }
+.chordgrid2 .cell.black { background: rgba(255,255,255,.06); }
+.chordgrid2 .cell.cur { background: var(--ok); color: var(--panel); }
+.chordgrid2 .cell.next { box-shadow: inset 0 0 0 2px var(--accent); }
+.chordgrid2 .cell.none { cursor: default; opacity: .4; }
+.chordgrid2 .cell small { display: block; color: var(--sub); font-size: 10px; }
+.chordgrid2 .cell.cur small { color: var(--panel); }
+.voices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0 4px; }
+.voice { border: 2px solid var(--sub); border-radius: 4px; padding: 6px 8px; font-size: 13px; }
+.voice h3 { margin: 0 0 4px; font-size: 13px; font-weight: normal; }
+.voice .seg button { padding: 2px 8px; font-size: 12px; }
+.voice.dim { opacity: .4; }
+.styles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.style { border: 2px solid var(--sub); border-radius: 4px; padding: 6px; text-align: center; cursor: pointer; font-size: 13px; }
+.style svg { width: 100%; height: 30px; display: block; }
+.style svg path { fill: none; stroke: var(--ink); stroke-width: 2; }
+.style.on { border-color: var(--accent); background: rgba(248, 184, 0, .12); }
+.style small { display: block; color: var(--sub); font-size: 11px; }
+.ctl.spread { margin-top: 10px; }
+#btnHold.on { background: var(--accent); color: #000; border-color: var(--accent); }
+.songwin { width: min(760px, 96vw); }
+.songwin textarea { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--sub); border-radius: 3px;
+                    padding: 6px; font: 13px/1.5 "MS Gothic", monospace; user-select: text; }
+.chordcommon { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.chordcommon input { width: 100%; }
+
+/* ---------- カートリッジ ---------- */
+.tile.unknown { border-style: dashed; color: var(--sub); }
+.tile .k { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+.cartbody .field2 { grid-template-columns: 90px 1fr; }
+#tidyRows .srow, #startupRows .srow { grid-template-columns: 40px 1fr auto; }
+#startupRows select { max-width: 200px; }
+.lines div { margin: 3px 0; }
+
+/* ---------- 実機の確認 ---------- */
+.checkwin { width: min(600px, 94vw); position: relative; text-align: center; }
+.checkwin .q { font-size: 22px; margin: 18px 0 6px; }
+.checkwin .bigbtns { display: flex; gap: 12px; margin: 18px 0 8px; }
+.checkwin .bigbtns .btn { flex: 1; font-size: 22px; padding: 18px 8px; }
+.checkwin .steps { display: flex; justify-content: center; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
+.checkwin .steps i { width: 14px; height: 14px; border: 2px solid var(--sub); border-radius: 3px; display: block; }
+.checkwin .steps i.done { background: var(--ok); border-color: var(--ok); }
+.checkwin .steps i.now { border-color: var(--accent); }
+.checkwin .ckbtns { display: flex; gap: 8px; justify-content: center; }
+.ckitem { display: flex; align-items: center; gap: 12px; text-align: left; border: 2px solid var(--sub); border-radius: 4px;
+          padding: 8px 10px; margin: 8px 0; }
+.ckitem > div { flex: 1; }
+.dangertext { color: var(--danger); }
+
+/* 1〜5 のタブでの外部の鍵盤 */
+.kbfollow { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; }
+.kbfollow[hidden] { display: none; }
+
+/* ✕(閉じる): 小窓の右上の角に、枠付きのボタンとして。スクロールしても上に残る */
+.overlay > .win { position: relative; }
+.close { position: sticky; top: 0; float: right; z-index: 2; width: 32px; height: 32px; margin: -4px -8px 4px 12px;
+         display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; line-height: 1;
+         color: var(--ink); background: var(--panel); border: 2px solid var(--sub); border-radius: 4px; }
+.close:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 度数+補足: 補足の鍵のます */
+.chordgrid .cell.mod { color: var(--accent2); font-weight: bold; }
+.chordgrid .cell.mod.cur { color: var(--panel); }
+
+/* 進行の欄: 行ごとの譜面(ChordWiki から取り込んだ曲は歌詞つき) */
+.chordprog.sheet { display: block; max-height: 300px; overflow: auto; padding-right: 4px; }
+.sheethead { color: var(--accent); font-size: 12px; margin: 8px 0 2px; }
+.sheetline { display: flex; flex-wrap: wrap; align-items: flex-end; margin: 2px 0 6px; }
+.chordprog.sheet span.seg { border: none; padding: 0 1px; display: inline-flex; flex-direction: column; cursor: pointer; }
+.chordprog.sheet span.seg.plain { cursor: default; }
+.chordprog.sheet span.seg i { font-style: normal; color: var(--accent2); font-size: 13px; min-height: 1.3em; padding: 0 3px;
+                              border-radius: 3px; border: 2px solid transparent; white-space: nowrap; }
+.chordprog.sheet span.seg u { text-decoration: none; font-size: 13px; white-space: pre; min-height: 1.2em; }
+.chordprog.sheet span.seg.cur { background: none; color: inherit; }
+.chordprog.sheet span.seg.cur i { background: var(--ok); color: var(--panel); }
+.chordprog.sheet span.seg.next { border: none; }
+.chordprog.sheet span.seg.next i { border-color: var(--accent); }
+.chordprog.sheet b.bar { color: var(--sub); font-weight: normal; padding: 0 4px; align-self: flex-start; }
+.chordprog.sheet span.seg.tail { padding: 0; }
+.chordprog.sheet span.seg.tail i { padding: 0; min-width: 0; }   /* 枠(透明)は残して、コードのますと高さをそろえる */
+
+/* 🎮 仮想ファミコン(ON のとき) */
+#btnVfc.on { background: var(--accent2); color: var(--panel); border-color: var(--accent2); }

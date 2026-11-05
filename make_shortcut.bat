@@ -8,7 +8,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$s = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $d 'FAMIMIMIDI SOUND EDITOR.lnk'));" ^
   "$s.TargetPath = (Join-Path '%~dp0' 'run.bat');" ^
   "$s.WorkingDirectory = '%~dp0';" ^
-  "$s.IconLocation = (Join-Path '%~dp0' 'famimimidi\icon.ico');" ^
+  "$s.IconLocation = (Join-Path '%~dp0' 'famimimidi2\icon.ico');" ^
   "$s.WindowStyle = 7;" ^
   "$s.Description = 'ふぁみみみっでぃ 音色エディタ';" ^
   "$s.Save(); Write-Host ('作りました: ' + $s.FullName)"

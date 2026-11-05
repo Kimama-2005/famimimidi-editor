@@ -16,7 +16,8 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-EXCLUDE = ["docs/Famimimidi_implement_chart_v10.pdf"]     # 作者さんの資料。公開しない
+EXCLUDE = ["docs/Famimimidi_implement_chart_v10.pdf",     # 作者さんの資料。公開しない
+           "famimimidi", "tests"]                         # 以前の版(手元に参照用に残しているだけ。2026-11-06 ユーザー判断)
 BRANCH = "public"
 
 
@@ -42,11 +43,11 @@ def main():
         env = dict(os.environ, GIT_INDEX_FILE=str(Path(tmp) / "index"))
         git("read-tree", a.source, env=env)
         for path in EXCLUDE:
-            git("rm", "--cached", "--quiet", "--ignore-unmatch", path, env=env)
+            git("rm", "-r", "--cached", "--quiet", "--ignore-unmatch", path, env=env)
         tree = git("write-tree", env=env)
 
     listed = git("ls-tree", "-r", "--name-only", tree)
-    leaked = [p for p in EXCLUDE if p in listed.splitlines()]
+    leaked = [p for p in EXCLUDE if any(f == p or f.startswith(p + "/") for f in listed.splitlines())]
     if leaked:
         sys.exit(f"除外できていません: {leaked}")
 
