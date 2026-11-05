@@ -1,6 +1,6 @@
 """FAMIMIMIDI SOUND EDITOR(作り直し版、docs/SPEC_v2.md)。
 
-今の版(famimimidi/)とは別のパッケージとして作り、全段がそろったら入れ替える。
+以前の版(famimimidi/)と入れ替えた(以前の版は 2026-11-06 に消した。git の履歴にはある)。
 
 層(上の層は下の層だけを使う。SPEC_v2 4.1):
     web / bridge   … 画面

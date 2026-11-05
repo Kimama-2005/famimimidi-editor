@@ -5,7 +5,7 @@
 ## フォント
 | 名前 | 場所 | ライセンス |
 |---|---|---|
-| DotGothic16(Fontworks) | `famimimidi/web/fonts/DotGothic16-Regular.ttf` | SIL Open Font License 1.1(全文: `famimimidi/web/fonts/OFL.txt`) |
+| DotGothic16(Fontworks) | `famimimidi2/web/fonts/DotGothic16-Regular.ttf` | SIL Open Font License 1.1(全文: `famimimidi2/web/fonts/OFL.txt`) |
 
 ## Python の部品(`vendor/wheels/`)
 オフラインで入れられるように、配布されているファイル(wheel)をそのまま同梱しています。各ファイルの中にライセンス全文が入っています。

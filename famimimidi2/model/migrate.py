@@ -1,6 +1,6 @@
-"""今の版(v1 = famimimidi/ が書いたファイル)からの移行(SPEC_v2 9章)。純粋な変換だけ(ファイルは store が扱う)。
+"""以前の版(v1 = famimimidi/ が書いたファイル)からの移行(SPEC_v2 9章)。純粋な変換だけ(ファイルは store が扱う)。
 
-| 今の版 | 作り直し後 |
+| 以前の版 | 作り直し後 |
 |---|---|
 | library.json v2 patches[] | tones[](channel → kind、cc → params。#82・#20・#2・#64・#84 と既定値は外す) |
 | library.json v2 sets[] | performances[](parts → slots、play → keyboard、chord → 5.5 の形)。
@@ -56,7 +56,7 @@ def keyboard_from_v1(play: dict | None) -> KeyboardMap:
 
 
 def chord_from_v1(c: dict | None) -> ChordSettings:
-    """今の版のコードモードの15項目 → 6項目。細かい値は近い奏法プリセットへ"""
+    """以前の版のコードモードの15項目 → 6項目。細かい値は近い奏法プリセットへ"""
     c = c or {}
     if not c:
         return ChordSettings()
@@ -113,7 +113,7 @@ def library_from_v1(d: dict, spec: Spec) -> Library:
 
 # ---------------------------------------------------------------- settings.json
 def session_from_v1(settings: dict, spec: Spec) -> Session:
-    """今の版では 5ch の音色はどこにも保存されていなかったので既定値。割り当て表とコードの設定だけ持ってくる"""
+    """以前の版では 5ch の音色はどこにも保存されていなかったので既定値。割り当て表とコードの設定だけ持ってくる"""
     keyboard = keyboard_from_v1(settings.get("play"))
     perf = Performance(name="", slots={ch: Slot(blank_tone(CH_KIND[ch])) for ch in CHS}, keyboard=keyboard,
                        controls=Controls.defaults_for(keyboard), chord=chord_from_v1(settings.get("chord")))

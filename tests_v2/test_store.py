@@ -1,4 +1,4 @@
-"""保存と、今の版からの移行のテスト。実際の user_data は読むだけ(一時フォルダに写して試し、前後で md5 を比べる)。"""
+"""保存と、以前の版からの移行のテスト。実際の user_data は読むだけ(一時フォルダに写して試し、前後で md5 を比べる)。"""
 import hashlib
 import json
 import shutil

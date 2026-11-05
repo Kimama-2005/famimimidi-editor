@@ -1,4 +1,4 @@
-"""アイコン(famimimidi/icon.ico と famimimidi/web/icon.png)を作る。
+"""アイコン(famimimidi2/icon.ico と famimimidi2/web/icon.png)を作る。
 
 16×16 のドット絵(ファミコンのカセット+音符)を、ぼかさずに拡大して各サイズを作る。
 作るときだけ Pillow を使う(アプリ本体は Pillow を使わない)。  python tools/make_icon.py
@@ -49,8 +49,8 @@ def main():
     img = base()
     sizes = [16, 32, 48, 64, 128, 256]
     big = img.resize((256, 256), Image.NEAREST)
-    big.save(ROOT / "famimimidi" / "icon.ico", sizes=[(s, s) for s in sizes])
-    img.resize((64, 64), Image.NEAREST).save(ROOT / "famimimidi" / "web" / "icon.png")
+    big.save(ROOT / "famimimidi2" / "icon.ico", sizes=[(s, s) for s in sizes])
+    img.resize((64, 64), Image.NEAREST).save(ROOT / "famimimidi2" / "web" / "icon.png")
     big.save(ROOT / "docs" / "icon.png")
     print("ok")
 

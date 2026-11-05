@@ -1,4 +1,4 @@
-"""コード名の解析・コードモードの鍵盤の配置・ボイシング(SPEC_v2 6.5)。今の版の famimimidi/chords.py から移した。
+"""コード名の解析・コードモードの鍵盤の配置・ボイシング(SPEC_v2 6.5)。以前の版の famimimidi/chords.py から移した。
 
 自作の「オタマコード」(OtamaChord Studio の otamatune/chords.py と OtamaCodeFirmware)と同じ表・同じ手順。
 違うのは声の数だけ: オタマは ベース+上5声、ふぁみみみっでぃは ベース(三角波)+上3声(パルス1・2、波形メモリ)。

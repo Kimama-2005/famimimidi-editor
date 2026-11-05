@@ -52,9 +52,8 @@
 | `docs/` | 仕様の要点、**実機検証ログ(03)**、音作りのノウハウ、**仕様書(SPEC_v2)**、今後の計画(06) |
 | `famimimidi2/` | 本体(`docs/SPEC_v2.md` で作り直した版)。device / model / music / performance / cartridge と、画面(`bridge.py` + `web/`) |
 | `tests_v2/` | 実機なしのテスト: `python -m unittest discover -s tests_v2 -t .` |
-| `hw_tests/` | 実機テストの MIDI ファイル生成と、確認手順書 |
+| `hw_tests/` | 実機テストの MIDI ファイル生成と、MIDI ファイルで試す手順書 |
 | `reference/` | 最初の調査(claude.ai)で使ったスクリプト |
-| `KICKOFF_PROMPT.md` | 最初に Claude Code に渡したプロンプト(記録) |
 | `tools/make_icon.py` | アイコンを作るスクリプト(Pillow が必要。アプリ本体には不要) |
 
 このソフトは、ユーザーが実機で確かめながら、Claude Code(Anthropic の AI)と一緒に作りました。開発の記録は `docs/` と `hw_tests/` にあります。

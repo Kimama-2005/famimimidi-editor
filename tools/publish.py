@@ -16,8 +16,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-EXCLUDE = ["docs/Famimimidi_implement_chart_v10.pdf",     # 作者さんの資料。公開しない
-           "famimimidi", "tests"]                         # 以前の版(手元に参照用に残しているだけ。2026-11-06 ユーザー判断)
+EXCLUDE = ["docs/Famimimidi_implement_chart_v10.pdf"]     # 作者さんの資料。公開しない(フォルダも指定できる)
 BRANCH = "public"
 
 

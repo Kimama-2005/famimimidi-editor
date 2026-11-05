@@ -30,7 +30,7 @@ class CardsTest(unittest.TestCase):
                         self.assertNotIn(cc, (82, 20, 2, 64, 84, 45, 50, 51, 121), (kind, c.key))
 
     def test_every_tone_cc_has_a_place(self):
-        """今の版の詳細表示にしかなかった項目も、どこかのカードに行き先がある"""
+        """以前の版の詳細表示にしかなかった項目も、どこかのカードに行き先がある"""
         for kind in ("pulse", "triangle", "noise", "dpcm_wave"):
             placed = set()
             for card in tonecards.cards_for(kind, SPEC):

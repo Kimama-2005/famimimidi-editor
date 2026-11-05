@@ -1,7 +1,7 @@
 """user_data の読み書き(SPEC_v2 5.0)。
 
 - 保存は「一時ファイルに書いて置き換える」(途中で落ちても壊れない)
-- どのファイルも先頭に "format" を持つ。今の版のファイルを見つけたら、読むときに自動で移行し、
+- どのファイルも先頭に "format" を持つ。以前の版のファイルを見つけたら、読むときに自動で移行し、
   元のファイルは user_data/old_v1/ に残す
 - 読めないファイル(壊れている・知らない形)は**上書きしない**。StoreError で知らせて止める
   (特にカートリッジの控えは、ユーザーのカートリッジの唯一の記録)
@@ -69,7 +69,7 @@ class Store:
 
     # ---------- 控え ----------
     def _backup(self, name):
-        """今の版のファイルを old_v1/ に写す(同じ名前があれば日時を付けて、前の控えを消さない)"""
+        """以前の版のファイルを old_v1/ に写す(同じ名前があれば日時を付けて、前の控えを消さない)"""
         src = self.path(name)
         if not src.exists():
             return None
@@ -114,12 +114,12 @@ class Store:
             lib = migrate.library_from_v1(d, self.spec)
             self._backup("library.json")
             self.save_library(lib)
-            self.notes.append(f"今の版のライブラリを移しました(音色 {len(lib.tones)}・演奏セット {len(lib.performances)}。元は {OLD_DIR}/)")
+            self.notes.append(f"以前の版のライブラリを移しました(音色 {len(lib.tones)}・演奏セット {len(lib.performances)}。元は {OLD_DIR}/)")
             return lib
         raise StoreError(f"library.json の形が分かりません(format={d.get('format')})。ファイルはそのままにしてあります")
 
     def seed_library(self) -> Library:
-        """data/ の見本(今の版の形)を新しい形に直して使う"""
+        """data/ の見本(以前の版の形)を新しい形に直して使う"""
         lib = Library()
         seed = self.data_dir / "patches.json"
         if seed.exists():
@@ -149,7 +149,7 @@ class Store:
             return Session.from_dict(self._expect(p, SESSION_FORMAT), self.spec)
         if settings is not None and (settings.get("play") or settings.get("chord")):
             s = migrate.session_from_v1(settings, self.spec)
-            self.notes.append("今の版の割り当て表とコードモードの設定を、作業中の演奏に移しました(5ch の音色は既定値)")
+            self.notes.append("以前の版の割り当て表とコードモードの設定を、作業中の演奏に移しました(5ch の音色は既定値)")
         else:
             s = Session()
         self.save_session(s)
@@ -167,7 +167,7 @@ class Store:
         if old.exists():
             book = migrate.chordbook_from_v1(read_json(old))
             self._backup("chords.json")
-            self.notes.append(f"今の版の曲(chords.json)を移しました。元は {OLD_DIR}/")
+            self.notes.append(f"以前の版の曲(chords.json)を移しました。元は {OLD_DIR}/")
         else:
             book = ChordBook()
         self.save_chordbook(book)
@@ -224,7 +224,7 @@ class Store:
         write_json(Path(path), lib.to_dict())
 
     def read_backup(self, path: Path) -> Library:
-        """バックアップ(新しい形)か今の版のライブラリを読む(取り込み用)"""
+        """バックアップ(新しい形)か以前の版のライブラリを読む(取り込み用)"""
         d = read_json(Path(path))
         if d.get("format") == LIB_FORMAT:
             return Library.from_dict(d, self.spec)

@@ -11,7 +11,7 @@
 - 実機テストの手順が多いと、手順の抜けや取り違えが起きる。手作業はできるだけ減らし、ファイル再生やアプリの自動操作にする。
 - 実機(ファミコン+カートリッジ)を持っているのはユーザーだけ。**Claudeは音を聴けない。** ハードウェアに関わる機能は、ユーザーが耳で判定できるテスト手順とセットで作ること。
 - 使用環境: Windows、Domino(MIDIシーケンサー)、Cubase、KORG KROSS2、KORG microKEY、USB-MIDIインターフェース(IN/OUT各1)。詳細は `docs/01_environment.md`。
-- 技術方針(2026-09-29 合意): Python の Windows デスクトップアプリ。オフラインで動くこと。詳細は `docs/05_requirements.md` の「合意事項」。
+- 技術方針(2026-09-29 合意): Python の Windows デスクトップアプリ。オフラインで動くこと。画面は pywebview(HTML/CSS/JS、外部 CDN なし)。仕様は `docs/SPEC_v2.md`。
 - 実機テスト用MIDIファイルは `hw_tests/make_tests.py` で生成する(出力 `hw_tests/out/`)。
 
 ## 絶対に守る事実(実機で確定済み)
@@ -43,17 +43,17 @@
 - 何か送るたびに、送信バイトとタイムスタンプをログに残す。ユーザーの報告と突き合わせるため。
 - Windowsの古いMIDIドライバは**1ポートを同時に1アプリしか開けない**ことがある。Domino/Cubaseを開いたままだとポートを掴めない。エラー時はそれを案内する。
 - 書き込み系の機能を実装したら、ユーザーに実機で確かめてもらうまで「完成」と言わない。
-- **新しい画面の見た目の確認に、デスクトップ全体のスクリーンショット(ImageGrab など)は使わない。** ユーザーの別のウィンドウが写り込む(実際に起きた)。動作は pywebview を偽ポートで開いて JS から確かめ、見た目は Bridge の答えを埋め込んだ1ファイルの HTML(`.preview/single.html`、履歴外)をアプリ内のブラウザ欄で見る。
+- **新しい画面の見た目の確認に、デスクトップ全体のスクリーンショット(ImageGrab など)は使わない。** ユーザーの別のウィンドウが写り込む(実際に起きた)。動作は pywebview を偽ポート・一時 user_data で隠して開き、JS から数字で確かめる(座標・送ったバイト・音源の波)。見た目は1ファイルの HTML(`.preview/`、履歴外)をアプリ内のブラウザ欄で見る。
 
 ## GitHub での公開(2026-10-06 ユーザーと合意)
 
 - https://github.com/Kimama-2005/famimimidi-editor (2026-10-06 に公開 → 作者さんへの確認のため一時非公開 → **2026-10-10 作者さんに確認済み、公開**。クレジットは README と画面の「接続と設定」に入れている。作者さんとのやりとりの中身は公開側に書かない)。ライセンス MIT。ソフト名 FAMIMIMIDI SOUND EDITOR。README に「非公式」と作者さん(@hekekekun)への配慮を明記
 - **手元の main は公開しない**(実装表 PDF が履歴に入っている)。公開用は main とつながらないブランチ `public` を `python tools/publish.py "メッセージ" --author "名前 <noreply メール>"` で作り、`git push origin public:main` で送る
-- 作者さんの一次資料(実装表の PDF など)を公開側に入れない。`tools/publish.py` の EXCLUDE に足す(フォルダも指定できる。以前の版 `famimimidi/`・`tests/` も外している)
+- 作者さんの一次資料(実装表の PDF など)を公開側に入れない。`tools/publish.py` の EXCLUDE に足す(フォルダも指定できる)
 
 ## コード構成
 
-**2026-11-05 に作り直し版(`famimimidi2/`、仕様は `docs/SPEC_v2.md`)へ差し替えた。** 以前の版 `famimimidi/`・`tests/` は手元に参照用に残しているが起動しない(公開版には入れない。`tools/publish.py` の EXCLUDE)(以前の版で今の `user_data` を開くと形が違って壊れるおそれがあるため、起動ファイルも消した)。
+**2026-11-05 に作り直し版(`famimimidi2/`、仕様は `docs/SPEC_v2.md`)へ差し替え、2026-11-06 に以前の版(`famimimidi/`・`tests/`・旧画面の手順書など)を消した**(git の履歴にはある)。以前の版が書いたファイル(v1)を見つけたら、`model/migrate.py` が読むときに新しい形へ移す(`data/patches.json` も v1 の形)。
 
 | パス | 内容 |
 |---|---|
@@ -71,7 +71,7 @@
 | `tools/` | `make_icon.py`(アイコンを作る。Pillow が必要)、`publish.py`(公開用の履歴を作る) |
 | `make_shortcut.bat` | デスクトップにアイコン付きのショートカットを作る |
 | `famimimidi2/icon.ico` / `web/icon.png` | アイコン(ファミコンのカセット+音符のドット絵) |
-| `hw_tests/` | 実機テストの MIDI ファイル生成と手順書(以前の版のもの。作り直し版では「✓ 実機の確認」を使う) |
+| `hw_tests/` | 実機テストの MIDI ファイル生成(`make_tests.py`)と、MIDI ファイルで試す手順書(ROUND2・ROUND3・V0)。アプリの機能の確認は「✓ 実機の確認」を使う |
 
 送信は必ず `Gate.send()` を通すこと(ログと遮断がそこにある)。
 
@@ -85,7 +85,6 @@
 | `docs/04_sound_design.md` | 音作りのノウハウ(パラメーターの実際の効き方) |
 | `docs/SPEC_v2.md` | **作り直し用の仕様書**(2026-11-05)。データの置き場所(音色・演奏セット・作業中の演奏・曲・控え・設定)と振る舞いを厳密に定義。新しい版はこれを元に作る |
 | `docs/06_roadmap.md` | **今後の計画**(A〜D 完了。E: 演奏セット、F: コードモード) |
-| `docs/05_requirements.md` | ソフトの要件案、MVP、技術選択肢、マクロ書き込みアルゴリズム |
 | `data/famimimidi_spec.json` | 全CC・PC・SysEx・ノートマップの機械可読定義 |
 | `data/patches.json` | これまでに作った音色とドラムキット定義 |
 | `reference/` | claude.ai 上で使ったPythonスクリプト(MIDIファイル生成、マクロ書き込み、検証用) |
