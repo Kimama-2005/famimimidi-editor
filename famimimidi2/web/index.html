@@ -99,7 +99,7 @@
               <div class="inline">
                 <span class="note">鍵盤の配置</span>
                 <span class="seg" id="layoutSeg"></span>
-                <span class="help" data-tip="オタマ互換 = オタマコードと同じ並び(1段目 基本の3和音、2段目 4和音、3段目 この曲のほかのコード)&#10;規則性重視 = どの段も「鍵の名前 = コードのルート」。1段目 3和音、2段目 4和音、3段目 ほかのコードをルートの位置に&#10;弾きやすさ重視 = この曲でよく使うコードを白鍵の真ん中に、続けて弾くコードどうしを近くに置く&#10;どれも C3〜B5 の36鍵に収めます。入りきらないときだけ C2〜B2 を使います。">?</span>
+                <span class="help" data-tip="弾きやすさ重視 = この曲でよく使うコードを白鍵の真ん中に、続けて弾くコードどうしを近くに置く(C3〜B5 の36鍵)&#10;度数+補足 = 基本コードの鍵(その調の Ⅰ〜Ⅶ)に、補足の鍵(7・M7・sus4 など)と分数のベースの鍵を同時に押してコードを作る。どの曲でも同じ並び。右手で基本コードを弾くか、左手で弾くかを選ぶ">?</span>
               </div>
               <div class="chordgrid2" id="chordGrid"></div>
               <div class="note">進行</div>
@@ -227,13 +227,9 @@
       <span class="spacer"></span>
       <button class="btn main" id="btnSongSave">この曲を保存</button>
     </div>
-    <h3 class="subh">全曲共通のコード(4段目・キー C で書く)</h3>
-    <div class="chordcommon" id="commonRow"></div>
     <div class="btns">
       <button class="btn" id="btnBookImport" title="OtamaChord Studio のコードセット(.json)を取り込む。12曲まるごと置き換わります">コードセットを取り込む…</button>
       <button class="btn" id="btnBookExport" title="オタマでも読める形の .json に書き出す">書き出す…</button>
-      <span class="spacer"></span>
-      <button class="btn" id="btnCommonSave">共通のコードを保存</button>
     </div>
   </div>
 </div>

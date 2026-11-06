@@ -69,7 +69,7 @@ def chord_from_v1(c: dict | None) -> ChordSettings:
         style = "strum"
     else:
         style = "piano"
-    return ChordSettings(active=bool(c.get("active", False)), layout=c.get("layout", "otama"),
+    return ChordSettings(active=bool(c.get("active", False)), layout=c.get("layout", "song"),
                          method=c.get("method", "split"), style=style, spread=int(c.get("strum_ms", 30) or 0),
                          bass="mid" if int(c.get("bass_floor", 36) or 36) >= 48 else "low",
                          glide=bool(c.get("glide", False))).normalized()

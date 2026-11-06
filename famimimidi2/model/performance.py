@@ -145,7 +145,7 @@ class Controls:
 
 
 # ---------------------------------------------------------------- コードモードの設定(5.5)
-LAYOUTS = ("otama", "regular", "song", "degree_r", "degree_l")
+LAYOUTS = ("song", "degree_r", "degree_l")   # オタマ互換・規則性重視は 2026-11-06 になくした(読むと "song" になる)
 METHODS = ("split", "arp")
 STYLES = ("piano", "organ", "strum", "pad")
 BASS_RANGES = ("low", "mid")
@@ -162,7 +162,7 @@ GRACE_MS = 80       # つなぎの猶予(固定)
 @dataclass
 class ChordSettings:
     active: bool = False
-    layout: str = "otama"
+    layout: str = "song"
     method: str = "split"
     style: str = "piano"
     spread: int = 30
@@ -170,7 +170,7 @@ class ChordSettings:
     glide: bool = False
 
     def normalized(self):
-        return ChordSettings(bool(self.active), self.layout if self.layout in LAYOUTS else "otama",
+        return ChordSettings(bool(self.active), self.layout if self.layout in LAYOUTS else "song",
                              self.method if self.method in METHODS else "split",
                              self.style if self.style in STYLES else "piano", clamp(self.spread, 0, 500),
                              self.bass if self.bass in BASS_RANGES else "low", bool(self.glide))

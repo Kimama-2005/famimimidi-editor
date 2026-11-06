@@ -127,8 +127,6 @@ function openSongEditor() {
   $('songKey').innerHTML = '<option value="auto">自動(コードから推定)</option>'
     + NOTE_NAMES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
   fillSong(v.state.song);
-  const common = v.book.common_row || ['C/E', 'C#dim7', 'G/B', 'F/G', 'Csus4', 'Fadd9', 'Fm6', 'Gsus4', 'C/G', 'G7sus4', 'Bb/C', 'Cadd9'];
-  $('commonRow').innerHTML = common.map((c, i) => `<input type="text" data-i="${i}" value="${esc(c)}" placeholder="${NOTE_NAMES[i]}">`).join('');
   openOv('ovSong');
 }
 function fillSong(i) {
@@ -190,13 +188,6 @@ window.addEventListener('pywebviewready', () => {
     showChordView(r.view);
     fillSong(i);
     $('songErr').textContent = r.unread && r.unread.length ? `取り込めなかったコード名: ${r.unread.join(' ')}` : 'ChordWiki から取り込みました(歌詞は取り込んでいません)';
-  };
-  $('btnCommonSave').onclick = async () => {
-    const row = [...document.querySelectorAll('#commonRow input')].map((x) => x.value);
-    const r = await api.save_common(row);
-    if (r.error) { toast(r.error, 'danger'); return; }
-    showChordView(r.view);
-    toast('全曲共通のコードを保存しました');
   };
   $('btnBookImport').onclick = async () => {
     if (!(await ask({ title: 'コードセットを取り込む', text: '12曲まるごと、選んだファイルの曲に置き換わります。', ok: '選ぶ' }))) return;

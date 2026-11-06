@@ -115,13 +115,10 @@ class ChordEngine:
             self._analyses = {}
             self._select_song(self.song, notify=True)
 
-    def common(self):
-        return cd.parse_common(self.book.common_row)
-
     def analysis(self, i):
         if i not in self._analyses:
             s = self.book.songs[i]
-            self._analyses[i] = cd.analyze(s.text, s.key, self.common(), self.cfg["layout"])
+            self._analyses[i] = cd.analyze(s.text, s.key, self.cfg["layout"])
         return self._analyses[i]
 
     def _select_song(self, i, notify=True):
@@ -580,7 +577,7 @@ class ChordEngine:
             rows = []
             degree = self._degree()
             lay = self.cfg["layout"]
-            order = ((2, 0, 1) if dg.degree_on_right(lay) else (1, 2, 0)) if degree else (2, 1, 0, 3)   # 上から高いオクターブ
+            order = ((2, 0, 1) if dg.degree_on_right(lay) else (1, 2, 0)) if degree else (2, 1, 0)   # 上から高いオクターブ
             for row in order:
                 cells = []
                 for off in range(12):

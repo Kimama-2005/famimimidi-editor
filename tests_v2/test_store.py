@@ -113,7 +113,7 @@ class MigrationTest(StoreTestBase):
         self.assertEqual(p.controls.mod_use, "duty")               # ch1 の CC#20 = ON
         self.assertEqual(p.controls.bend_to, [1, 2])
         self.assertEqual((p.chord.active, p.chord.style, p.chord.spread, p.chord.layout),
-                         (True, "piano", 30, "regular"))
+                         (True, "piano", 30, "song"))
 
     def test_poly_with_same_sound_is_linked(self):
         s = json.loads(json.dumps(OLD_LIBRARY["sets"][0]))

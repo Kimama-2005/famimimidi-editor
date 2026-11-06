@@ -1,6 +1,7 @@
 """コード名の解析・コードモードの鍵盤の配置・ボイシング(SPEC_v2 6.5)。以前の版の famimimidi/chords.py から移した。
 
-自作の「オタマコード」(OtamaChord Studio の otamatune/chords.py と OtamaCodeFirmware)と同じ表・同じ手順。
+コード名の解析とボイシングは、自作の「オタマコード」(OtamaChord Studio)と同じ手順。鍵盤の配置は「曲の弾きやすさ重視」と
+「度数+補足」(music/degree.py)の2つ(オタマ互換・規則性重視は 2026-11-06 になくした)。
 違うのは声の数だけ: オタマは ベース+上5声、ふぁみみみっでぃは ベース(三角波)+上3声(パルス1・2、波形メモリ)。
 上3声に入りきらないコード(4和音・9th など)は、大事な音から選ぶ(UPPER_PRIORITY)。
 曲データの型は model/chordbook.py(オタマのコードセット otamachord-set-v1 と同じ形)。
@@ -56,10 +57,6 @@ ROWS = [ROW1, ROW2]
 CUSTOM_ROW, COMMON_ROW = 2, 3     # 3段目(曲ごと)、4段目(全曲共通。オクターブ DOWN で出る)
 SLOTS = 12
 NUM_SONGS = 12
-
-# 4段目の初期値。全曲共通・キーCで書いたもの(他のキーでは移調される)
-COMMON_DEFAULT = ["C/E", "C#dim7", "G/B", "F/G", "Csus4", "Fadd9",
-                  "Fm6", "Gsus4", "C/G", "G7sus4", "Bb/C", "Cadd9"]
 
 # 鍵盤(37鍵 C3〜C6): C3〜B5 = 1〜3段目、C2〜B2 = 4段目(オクターブ DOWN。入りきらないときだけ)、C6 = なにもしない
 COMMON_LO, ROW_LO, TOP_KEY = 36, 48, 84      # C2, C3, C6
@@ -185,7 +182,7 @@ def find_slot(ch: Chord, key: int) -> tuple[int, int] | None:
 
 
 def estimate_key(chords: list[Chord]) -> int:
-    """1・2段目の鍵盤でいちばん多く弾けるキー(同点なら最初/最後のコードがⅠのキー)"""
+    """よく使うコードの表(ROW1・ROW2)でいちばん多く弾けるキー(同点なら最後のコードがⅠのキー)"""
     def score(k):
         s = sum(1.0 for c in chords if find_slot(c, k))
         s += 0.3 * sum(1 for c in chords if c.ivs in (MAJ, MAJ7) and c.root == k)
@@ -201,49 +198,6 @@ class Assignment:
     customs: list[Chord | None]           # 3段目の12枠
     overflow: list[Chord]                 # 入りきらなかったコード
     table: dict = field(default_factory=dict)   # (段, 位置) → コード(曲のキーで)。鍵盤の配置そのもの
-
-
-def assign(chords: list[Chord], key: int, customs: list[Chord | None] | None = None,
-           common: list[Chord | None] | None = None, common_first: bool = True) -> Assignment:
-    """曲のコードを鍵盤に割り当てる。
-    1・2段目 → 4段目(全曲共通・common はキーCで書いたもの)→ 3段目の枠(白鍵から順に)の順に探す。
-    common_first=False なら 4段目より先に3段目へ入れ、3段目が埋まったときだけ4段目を使う
-    (4段目はオクターブ DOWN が要るので、37鍵の鍵盤 C3〜C6 だけで弾けるように。2026-11-05)"""
-    common_k = [c.transpose(key) if c else None for c in (common or [])]
-    order = [0, 2, 4, 5, 7, 9, 11, 1, 3, 6, 8, 10]
-    custom = list(customs) if customs else [None] * SLOTS
-    custom += [None] * (SLOTS - len(custom))
-    slots, overflow = {}, []
-    for c in dict.fromkeys(chords):
-        s = find_slot(c, key)
-        if s:
-            slots[c] = s
-            continue
-        if common_first and c in common_k:
-            slots[c] = (COMMON_ROW, common_k.index(c))
-            continue
-        if c in custom:
-            slots[c] = (CUSTOM_ROW, custom.index(c))
-            continue
-        free = next((o for o in order if custom[o] is None), None)
-        if free is not None:
-            custom[free] = c
-            slots[c] = (CUSTOM_ROW, free)
-        elif c in common_k:                    # 3段目が埋まっていたら4段目
-            slots[c] = (COMMON_ROW, common_k.index(c))
-        else:
-            overflow.append(c)
-    return Assignment(slots, custom, overflow)
-
-
-def parse_common(symbols: list[str] | None) -> list[Chord | None]:
-    out = []
-    for sym in (list(symbols or COMMON_DEFAULT) + [""] * SLOTS)[:SLOTS]:
-        try:
-            out.append(parse(sym) if str(sym).strip() else None)
-        except ValueError:
-            out.append(None)
-    return out
 
 
 # ---------------- ボイシング ----------------
@@ -323,34 +277,23 @@ class Analysis:
     assign: Assignment
 
 
-def analyze(text: str, key: int | None, common: list[Chord | None] | None = None, scheme: str = "otama") -> Analysis:
+def analyze(text: str, key: int | None, scheme: str = "song") -> Analysis:
     """曲(コード進行のテキストとキー)→ 鍵盤の配置。4段目(オクターブ DOWN)は3段目が埋まったときだけ使う
     (37鍵 C3〜C6 で弾けるように。SPEC 5.5「3オクターブに収める = いつも」)"""
     chords, errors = parse_progression(text)
     auto = estimate_key(chords)
     k = auto if key is None else key
-    return Analysis(chords, errors, k, auto, layout(chords, k, scheme, common, common_first=False))
+    return Analysis(chords, errors, k, auto, layout(chords, k, scheme))
 
 
-# ---------------- 鍵盤の配置(3通り) ----------------
-# otama   オタマ互換: 1段目=基本の3和音+J-POP の借用・セカンダリー、2段目=4和音、3段目=曲ごと(出てくる順)、4段目=全曲共通
-# regular 規則性重視: どの段も「鍵の名前 = コードのルート(キーからの度数)」。1段目=3和音、2段目=4和音
-#         (白鍵=音階の上のコード、黒鍵=音階の外のルート ♭Ⅱ・♭Ⅲ・#Ⅳ・♭Ⅵ・♭Ⅶ)、3段目=曲の変わり種をルートの位置に
-# song    曲の弾きやすさ重視: その曲でよく使うコードを白鍵の弾きやすい所に、続けて弾くコードどうしを近くに
+# ---------------- 鍵盤の配置 ----------------
+# song      曲の弾きやすさ重視: その曲でよく使うコードを白鍵の弾きやすい所に、続けて弾くコードどうしを近くに
 # degree_r / degree_l 度数+補足: 基本コードの鍵と補足の鍵を同時に押す(music/degree.py)。左右どちらの手で基本コードを弾くか
-SCHEMES = {"otama": "オタマ互換", "regular": "規則性重視", "song": "曲の弾きやすさ重視",
+# (オタマ互換・規則性重視は 2026-11-06 にユーザー判断でなくした)
+SCHEMES = {"song": "曲の弾きやすさ重視",
            "degree_r": "度数+補足(右手で基本コード)", "degree_l": "度数+補足(左手で基本コード)"}
-DIM = (0, 3, 6)
-REG_ROW1 = [(0, MAJ), (1, MAJ), (2, MIN), (3, MAJ), (4, MIN), (5, MAJ),
-            (6, DIM), (7, MAJ), (8, MAJ), (9, MIN), (10, MAJ), (11, DIM)]
-REG_ROW2 = [(0, MAJ7), (1, MAJ7), (2, MIN7), (3, MAJ7), (4, MIN7), (5, MAJ7),
-            (6, M7B5), (7, DOM7), (8, MAJ7), (9, MIN7), (10, DOM7), (11, M7B5)]
 ROW_TITLES = {
-    "otama": {3: "4段目 C2〜B2\n(DOWN)・全曲共通", 0: "1段目 C3〜B3\n基本コード", 1: "2段目 C4〜B4\n4和音など",
-              2: "3段目 C5〜B5\nこの曲用"},
-    "regular": {3: "C2〜B2(DOWN)\n入りきらない分", 0: "C3〜B3 3和音\n鍵=ルート", 1: "C4〜B4 4和音\n鍵=ルート",
-                2: "C5〜B5 変わり種\nルートの位置"},
-    "song": {3: "C2〜B2(DOWN)\n入りきらない分", 0: "C3〜B3", 1: "C4〜B4\nよく使うコード", 2: "C5〜B5"},
+    "song": {0: "C3〜B3", 1: "C4〜B4\nよく使うコード", 2: "C5〜B5"},
     "degree_r": {2: "C5〜B5\n分数のベース", 0: "C4〜B4\n基本コード", 1: "C3〜B3\n補足"},
     "degree_l": {1: "C5〜B5\n補足", 2: "C4〜B4\n分数のベース", 0: "C3〜B3\n基本コード"},
 }
@@ -364,53 +307,17 @@ def _finish(table, overflow):
     return Assignment(slots, customs, overflow, table)
 
 
-def layout(chords: list[Chord], key: int, scheme: str = "otama", common=None, common_first: bool = True) -> Assignment:
+def layout(chords: list[Chord], key: int, scheme: str = "song") -> Assignment:
     """曲のコードの鍵盤の配置。table は曲のキーでのコード(移調するときはずらす)"""
-    if scheme == "regular":
-        return _layout_regular(chords, key)
-    if scheme == "song":
-        return _layout_song(chords)
     if scheme in ("degree_r", "degree_l"):
         return _layout_degree(chords, key)
-    a = assign(chords, key, common=common, common_first=common_first)
-    table = {(r, o): row_chord(r, o, key) for r in (0, 1) for o in range(SLOTS)}
-    for o, c in enumerate(a.customs):
-        if c:
-            table[(CUSTOM_ROW, o)] = c
-    for o, c in enumerate(common or []):
-        if c:
-            table[(COMMON_ROW, o)] = c.transpose(key)
-    a.table = table
-    return a
-
+    return _layout_song(chords)
 
 def _layout_degree(chords, key):
     """度数+補足: 1段目 = 基本コードの鍵(補足なし)。曲のコードは鍵と補足の組み合わせで作る。作れないものだけ overflow"""
     from . import degree
     table = {(0, o): degree.build(key, o) for o in range(SLOTS)}
     overflow = [c for c in dict.fromkeys(chords) if degree.find(key, c) is None]
-    return _finish(table, overflow)
-
-
-def _layout_regular(chords, key):
-    table = {}
-    for r, row in ((0, REG_ROW1), (1, REG_ROW2)):
-        for o, (deg, ivs) in enumerate(row):
-            table[(r, o)] = Chord((key + deg) % 12, ivs)
-    fixed = set(table.values())
-    overflow = []
-    for c in dict.fromkeys(chords):
-        if c in fixed:
-            continue
-        pos = (c.root - key) % 12                       # ルートの位置。ふさがっていたら近い空きへ(右→左の順)
-        for row in (CUSTOM_ROW, COMMON_ROW):
-            spot = next(((row, (pos + d) % 12) for d in (0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6)
-                         if (row, (pos + d) % 12) not in table), None)
-            if spot:
-                table[spot] = c
-                break
-        else:
-            overflow.append(c)
     return _finish(table, overflow)
 
 

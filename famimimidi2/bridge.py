@@ -184,9 +184,6 @@ class Bridge:
     def save_song(self, i, name, key, text):
         return self._app.save_song(i, name, key, text)
 
-    def save_common(self, symbols):
-        return self._app.save_common(symbols)
-
     def import_chordbook(self):
         """OtamaChord Studio のコードセット(.json)を選んで取り込む"""
         path = self._open_dialog(("コードセット (*.json)", "すべて (*.*)"))

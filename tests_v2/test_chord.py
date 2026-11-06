@@ -13,7 +13,7 @@ from .test_app import AppTestBase
 
 
 class Rig:
-    def __init__(self, settings=None, text="C F G C", key=0, controls=None):
+    def __init__(self, settings=None, text="C F G C", key=0, controls=None, keep_song=False):
         self.sent, self.ccs, self.values = [], [], {}
         self.sched = ManualScheduler()
         self.e = ChordEngine(send=self.sent.append, to_ch0=lambda ch: ch - 1,
@@ -23,7 +23,10 @@ class Rig:
         book = ChordBook()
         book.songs[0] = Song("テスト", key, text)
         self.e.set_book(book)
-        self.e.configure(settings or ChordSettings(style="organ", spread=0), controls or Controls())
+        settings = settings or ChordSettings(style="organ", spread=0)
+        if settings.layout == "song" and not keep_song:      # テストは並びが決まっている度数+補足(右手)で弾く
+            settings = ChordSettings.from_dict({**settings.to_dict(), "layout": "degree_r"})
+        self.e.configure(settings, controls or Controls())
         self.e.set_active(True)
 
     def take(self):
@@ -46,7 +49,7 @@ class EngineTest(unittest.TestCase):
     def test_split_voicing(self):
         r = Rig()
         self.assertIn((5, 18, 127), r.ccs)       # ボイス3は波形メモリ
-        r.e.handle(bytes([0x90, 48, 100]))       # C3 = Ⅰ(C)
+        r.e.handle(bytes([0x90, 60, 100]))       # C4 = Ⅰ(C)
         on = r.notes_on(r.take())
         self.assertEqual(set(on), {1, 2, 3, 5})
         self.assertEqual(on[3], 36)              # ベースは C2 から
@@ -56,9 +59,9 @@ class EngineTest(unittest.TestCase):
 
     def test_release_after_grace(self):
         r = Rig()
-        r.e.handle(bytes([0x90, 48, 100]))
+        r.e.handle(bytes([0x90, 60, 100]))
         r.take()
-        r.e.handle(bytes([0x80, 48, 0]))
+        r.e.handle(bytes([0x80, 60, 0]))
         self.assertEqual(r.take(), [])           # 猶予(80ms)の間は鳴らし続ける
         r.sched.advance(0.1)
         offs = r.take()
@@ -66,11 +69,11 @@ class EngineTest(unittest.TestCase):
 
     def test_change_within_grace_is_chord_change(self):
         r = Rig()
-        r.e.handle(bytes([0x90, 48, 100]))
-        r.e.handle(bytes([0x80, 48, 0]))
+        r.e.handle(bytes([0x90, 60, 100]))
+        r.e.handle(bytes([0x80, 60, 0]))
         r.take()
         r.sched.advance(0.04)
-        r.e.handle(bytes([0x90, 53, 100]))       # F3 = Ⅳ(F)
+        r.e.handle(bytes([0x90, 65, 100]))       # F4 = Ⅳ(F)
         r.sched.advance(0.2)
         msgs = r.take()
         self.assertTrue(any(m[0] == 0x92 and m[1] == 41 for m in msgs))   # ベース F2
@@ -78,22 +81,22 @@ class EngineTest(unittest.TestCase):
 
     def test_organ_keeps_common_notes_piano_retriggers(self):
         r = Rig(ChordSettings(style="organ", spread=0))
-        r.e.handle(bytes([0x90, 48, 100]))
+        r.e.handle(bytes([0x90, 60, 100]))
         r.take()
-        r.e.handle(bytes([0x90, 57, 100]))       # A3 = Ⅵm(Am): C・E は共通
+        r.e.handle(bytes([0x90, 69, 100]))       # A4 = Ⅵm(Am): C・E は共通
         organ = r.take()
         p = Rig(ChordSettings(style="piano", spread=0))
         p.values = {}
-        p.e.handle(bytes([0x90, 48, 100]))
+        p.e.handle(bytes([0x90, 60, 100]))
         p.take()
-        p.e.handle(bytes([0x90, 57, 100]))
+        p.e.handle(bytes([0x90, 69, 100]))
         piano = p.take()
         self.assertLess(len(organ), len(piano))  # ピアノは全部打ち直す
         self.assertEqual(len([m for m in piano if m[0] & 0xF0 == 0x90]), 4)
 
     def test_strum_spreads_notes(self):
         r = Rig(ChordSettings(style="organ", spread=90))
-        r.e.handle(bytes([0x90, 48, 100]))
+        r.e.handle(bytes([0x90, 60, 100]))
         first = r.take()
         self.assertEqual(len(first), 1)          # 一番下(ベース)がすぐ、ほかはずらして
         r.sched.advance(0.1)
@@ -102,8 +105,8 @@ class EngineTest(unittest.TestCase):
     def test_sustain_and_hold(self):
         r = Rig()
         r.e.handle(bytes([0xB0, 64, 127]))
-        r.e.handle(bytes([0x90, 48, 100]))
-        r.e.handle(bytes([0x80, 48, 0]))
+        r.e.handle(bytes([0x90, 60, 100]))
+        r.e.handle(bytes([0x80, 60, 0]))
         r.take()
         r.sched.advance(0.5)
         self.assertEqual(r.take(), [])           # 踏んでいる間は保持
@@ -111,8 +114,8 @@ class EngineTest(unittest.TestCase):
         r.sched.advance(0.2)
         self.assertTrue(r.take())
         r.e.toggle_hold()
-        r.e.handle(bytes([0x90, 48, 100]))
-        r.e.handle(bytes([0x80, 48, 0]))
+        r.e.handle(bytes([0x90, 60, 100]))
+        r.e.handle(bytes([0x80, 60, 0]))
         r.take()
         r.sched.advance(0.5)
         self.assertEqual(r.take(), [])           # ホールド中も保持
@@ -126,7 +129,7 @@ class EngineTest(unittest.TestCase):
     def test_key_shift(self):
         r = Rig()
         r.e.shift_key(2)
-        r.e.handle(bytes([0x90, 48, 100]))
+        r.e.handle(bytes([0x90, 60, 100]))
         self.assertEqual(r.notes_on(r.take())[3] % 12, 2)   # キー D のⅠ = D
         self.assertEqual(r.e.state()["chord"]["name"], "D")
 
@@ -142,7 +145,8 @@ class EngineTest(unittest.TestCase):
         r = Rig(ChordSettings(method="arp", style="organ", spread=0))
         self.assertNotIn((5, 18, 127), r.ccs)
         self.assertIn((1, 23, 127), r.ccs)       # アルペジエーターが OFF なら ON に
-        r.e.handle(bytes([0x90, 60, 100]))       # C4 = ⅠM7
+        r.e.handle(bytes([0x90, 50, 100]))       # D3 = 補足 M7
+        r.e.handle(bytes([0x90, 60, 100]))       # C4 = Ⅰ → CM7
         msgs = r.take()
         chs = {(m[0] & 0x0F) + 1 for m in msgs}
         self.assertEqual(chs, {1, 3})
@@ -165,18 +169,19 @@ class EngineTest(unittest.TestCase):
         r = Rig(text="C F G C")
         st = r.e.state()
         self.assertEqual(st["next"]["name"], "C")
-        r.e.handle(bytes([0x90, 48, 100]))
+        r.e.handle(bytes([0x90, 60, 100]))
         st = r.e.state()
         self.assertEqual((st["prog_pos"], st["next"]["name"]), (0, "F"))
-        self.assertEqual(st["next"]["note"], 53)           # 次に弾く鍵(F3)
+        self.assertEqual(st["next"]["note"], 65)           # 次に弾く鍵(F4 = Ⅳ)
 
     def test_view_json(self):
         r = Rig(text="C F G Am Em7 D7 Bb Ebdim")
-        for layout in ("otama", "regular", "song"):
+        for layout in ("song", "degree_r", "degree_l"):
             r.e.configure(ChordSettings(layout=layout))
             v = r.e.view()
             json.dumps(v, ensure_ascii=False)
-            self.assertEqual(len(v["rows"]), 4)
+            self.assertEqual(len(v["rows"]), 3)
+        self.assertEqual(ChordSettings(layout="otama").normalized().layout, "song")   # なくした配置は弾きやすさ重視に
 
 
 class ChordAppTest(AppTestBase):
@@ -186,11 +191,12 @@ class ChordAppTest(AppTestBase):
 
     def test_active_only_in_play_place(self):
         self.connect()
+        self.app.set_chord_settings({"layout": "degree_r"})
         self.app.set_chord_active(True)
         self.assertTrue(self.app.chord.active)
         self.app.gate.flush()
         self.assertIn(bytes([0xB4, 18, 127]), self.midi.take())
-        self.app.screen_note(48, 100, True)
+        self.app.screen_note(60, 100, True)
         self.app.scheduler.advance(0.2)           # ピアノの奏法はずらして入る
         self.assertEqual({m[0] & 0x0F for m in self.midi.take() if m[0] & 0xF0 == 0x90}, {0, 1, 2, 4})
         self.app.set_place(5)                     # 音色づくりの場所ではコードモードは効かない
@@ -221,14 +227,12 @@ class ChordAppTest(AppTestBase):
         self.assertEqual(self.app.session.performance.tone(5).value(18, self.app.spec), 0)   # 作業中の演奏には入る
 
     def test_settings_and_book(self):
-        v = self.app.set_chord_settings({"layout": "regular", "style": "pad", "spread": 120})
+        v = self.app.set_chord_settings({"layout": "degree_l", "style": "pad", "spread": 120})
         json.dumps(v, ensure_ascii=False)
         self.assertEqual(v["settings"]["style"], "pad")
-        self.assertEqual(self.app.session.performance.chord.layout, "regular")
+        self.assertEqual(self.app.session.performance.chord.layout, "degree_l")
         r = self.app.save_song(1, "2曲目", "auto", "Dm7 G7 CM7 Xyz")
         self.assertEqual(len(r["errors"]), 1)
-        self.assertIn("error", self.app.save_common(["C", "Qq"]))
-        self.assertNotIn("error", self.app.save_common(["C/E"] * 12))
         r = self.app.import_chordbook([{"name": "取り込み", "key": 2, "text": "D G A"}])
         self.assertEqual(self.app.chordbook.songs[0].name, "取り込み")
         page = ('<h1 class="title">ウィキの曲(テスト主題歌)</h1><p class="key">Key: G</p>'
@@ -240,10 +244,11 @@ class ChordAppTest(AppTestBase):
         self.assertIn("error", self.app.import_chordwiki(3, "<html></html>"))
 
     def test_keyboard_view_labels(self):
+        self.app.set_chord_settings({"layout": "degree_r"})
         self.app.set_chord_active(True)
         kv = self.app.keyboard_view()
         self.assertEqual(kv["mode"], "chord")
-        self.assertEqual(kv["labels"]["48"], "C")
+        self.assertEqual(kv["labels"]["60"], "C")
 
 
 if __name__ == "__main__":
@@ -255,8 +260,8 @@ class ProgressionNoSkipTest(unittest.TestCase):
 
     def test_wrong_chord_does_not_jump_ahead(self):
         r = Rig(text="C F G C Am")
-        r.e.handle(bytes([0x90, 48, 100]))          # C → 位置0
-        r.e.handle(bytes([0x80, 48, 0]))
+        r.e.handle(bytes([0x90, 60, 100]))          # C → 位置0
+        r.e.handle(bytes([0x80, 60, 0]))
         st = r.e.state()
         self.assertEqual(st["prog_pos"], 0)
         a = r.e._slot_of(r.e.progression()[4])       # Am(5番目)を弾いても飛ばない
@@ -268,13 +273,13 @@ class ProgressionNoSkipTest(unittest.TestCase):
     def test_replaying_current_chord_does_not_advance(self):
         r = Rig(text="C F C G")
         for _ in range(3):
-            r.e.handle(bytes([0x90, 48, 100]))
-            r.e.handle(bytes([0x80, 48, 0]))
+            r.e.handle(bytes([0x90, 60, 100]))
+            r.e.handle(bytes([0x80, 60, 0]))
         self.assertEqual(r.e.state()["prog_pos"], 0)    # 前は C を弾き直すと3番目の C へ飛んでいた
 
     def test_returning_to_held_chord_does_not_advance(self):
         r = Rig(text="C G C G")
-        r.e.handle(bytes([0x90, 48, 100]))           # C を押さえたまま
+        r.e.handle(bytes([0x90, 60, 100]))           # C を押さえたまま
         g = r.e._slot_of(r.e.progression()[1])
         r.e.play_slot(*g, on=True)                   # G → 位置1
         r.e.play_slot(*g, on=False)                  # 離すと C に戻るが、進まない
@@ -286,3 +291,13 @@ class ProgressionNoSkipTest(unittest.TestCase):
         self.assertEqual(r.e.state()["next"]["index"], 2)
         r.e.set_next(0)
         self.assertEqual(r.e.state()["prog_pos"], -1)
+
+
+class SongLayoutTest(unittest.TestCase):
+    def test_song_layout_plays_most_used_on_white_key(self):
+        r = Rig(text="C F G C F C", keep_song=True)
+        self.assertEqual(r.e.cfg["layout"], "song")
+        row, off = r.e._slot_of(cd.parse("C"))
+        self.assertIn(off, (0, 2, 4, 5, 7, 9, 11))               # いちばん使う C は白鍵
+        r.e.play_slot(row, off, on=True)
+        self.assertEqual(r.e.state()["chord"]["name"], "C")

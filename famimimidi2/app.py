@@ -593,24 +593,6 @@ class App:
         _, errors = cd.parse_progression(text or "")
         return {"view": self.chord_view(), "errors": errors}
 
-    def save_common(self, symbols):
-        """4段目(全曲共通・キー C)。空なら初期値"""
-        row = [str(x or "").strip() for x in (symbols or [])]
-        bad = []
-        for sym in row:
-            if sym:
-                try:
-                    cd.parse(sym)
-                except ValueError:
-                    bad.append(sym)
-        if bad:
-            return {"error": f"読めないコード名: {' '.join(bad)}"}
-        self.chordbook.common_row = row if any(row) else None
-        self.chordbook.__post_init__()
-        self.store.save_chordbook(self.chordbook)
-        self.chord.set_book(self.chordbook)
-        return {"view": self.chord_view()}
-
     def import_chordbook(self, data):
         """OtamaChord Studio のコードセット / songs.json(曲の配列)を取り込む(12曲まるごと置き換え)"""
         if isinstance(data, list):

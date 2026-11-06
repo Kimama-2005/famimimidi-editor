@@ -49,6 +49,7 @@
 
 - https://github.com/Kimama-2005/famimimidi-editor (2026-10-06 に公開 → 作者さんへの確認のため一時非公開 → **2026-10-10 作者さんに確認済み、公開**。クレジットは README と画面の「接続と設定」に入れている。作者さんとのやりとりの中身は公開側に書かない)。ライセンス MIT。ソフト名 FAMIMIMIDI SOUND EDITOR。README に「非公式」と作者さん(@hekekekun)への配慮を明記
 - **手元の main は公開しない**(実装表 PDF が履歴に入っている)。公開用は main とつながらないブランチ `public` を `python tools/publish.py "メッセージ" --author "名前 <noreply メール>"` で作り、`git push origin public:main` で送る
+- **リリース**(2026-11-06 に v2.0.0 を公開): 公開用の `public` から、起動に要るものだけの zip を作って添付する。`git archive --format=zip --prefix=famimimidi-editor/ -o FAMIMIMIDI-SOUND-EDITOR-vX.Y.Z.zip public run.bat make_shortcut.bat requirements.txt README.md LICENSE THIRD_PARTY_NOTICES.md famimimidi2 data vendor` → 展開して `vendor/wheels` から部品が入りアプリを読み込めるか確かめる → `gh release create vX.Y.Z <zip> --target <public の完全なコミット> --notes-file …`(短いコミット番号は断られる)。公開はユーザーの OK のあと
 - 作者さんの一次資料(実装表の PDF など)を公開側に入れない。`tools/publish.py` の EXCLUDE に足す(フォルダも指定できる)
 
 ## コード構成
@@ -61,7 +62,7 @@
 | `famimimidi2/device/` | 機器の層。`gate.py` = **送信の関所**(すべての送信はここ。書き込み系 CC#45/50/51 は `write_ok` のときだけ、CC#121 は送らない、CC の間引き、音量0の ch へのノートオンを省く、送信ログ `logs/日付.log`)。`winmm.py`(winmm の ctypes)、`single.py`(二重起動の防止とほかの MIDI ソフトの警告)、`sysex.py`(ch5 波形の SysEx) |
 | `famimimidi2/device/virtual.py` / `famimimidi2/web/vfc.js` | **🎮 仮想ファミコン**: ふぁみみみっでぃ無しで試すための出力ポートの偽物と、画面の音源(WebAudio。実装表の値どおりにそれっぽく鳴らす)。仮想のときはカートリッジへの書き込みと実機の確認を止める(控えを守る) |
 | `famimimidi2/model/` | データの層(送信しない)。`tone.py` 音色、`performance.py` 演奏セット(Part・KeyboardMap・Controls・ChordSettings)、`session.py` 作業中の演奏、`library.py`、`chordbook.py` 曲、`prefs.py` 設定、`cartmirror.py` カートリッジの控え、`store.py` 保存(一時ファイル→置き換え、読めないファイルは上書きしない)、`migrate.py` 以前の版からの移行(元は `user_data/old_v1/`) |
-| `famimimidi2/music/` | 音楽の計算。`spec.py` 実装表、`tonecards.py` 音色づくりのカード、`chords.py` コード・鍵盤の配置3通り・ボイシング・ChordWiki 取り込み(**歌詞は取り込まない**。歌詞は保存したページから表示するときだけ読む `sheet_from_chordwiki`。曲には場所 `source` だけ)、`waves.py` 波形の見本、`degree.py` コードモードの配置「度数+補足」(インスタコード風。基本コードの鍵+補足の鍵の同時押し、C4 で左右に分ける) |
+| `famimimidi2/music/` | 音楽の計算。`spec.py` 実装表、`tonecards.py` 音色づくりのカード、`chords.py` コード・鍵盤の配置(曲の弾きやすさ重視。もう1つの「度数+補足」は degree.py)・ボイシング・ChordWiki 取り込み(**歌詞は取り込まない**。歌詞は保存したページから表示するときだけ読む `sheet_from_chordwiki`。曲には場所 `source` だけ)、`waves.py` 波形の見本、`degree.py` コードモードの配置「度数+補足」(インスタコード風。基本コードの鍵+補足の鍵の同時押し、C4 で左右に分ける) |
 | `famimimidi2/performance/` | 時間で動くもの。`router.py` 鍵盤の振り分け(**タブで決まる**: 1〜5 はその ch、♪ は割り当て表かコードモード)、`chordmode.py` コードモード、`scheduler.py` ただ1本のスケジューラ |
 | `famimimidi2/cartridge/` | カートリッジへの書き込み。`plans.py` 計画(文言と手順)、`writer.py` 実行、`mirror.py` **控えを書き換えてよいのはここだけ**、`tidy.py` 整える(土台と後始末)。マクロの10項目は重要度順に自動で選ぶ |
 | `famimimidi2/checks.py` | ✓ 実機の確認モード(アプリが鳴らし、答えはボタン。結果は `user_data/checks/`) |

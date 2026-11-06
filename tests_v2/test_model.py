@@ -160,7 +160,7 @@ class PerformanceTest(unittest.TestCase):
 
     def test_chord_settings(self):
         c = ChordSettings.from_dict({"style": "pad", "spread": 900, "bass": "mid", "layout": "x"})
-        self.assertEqual((c.style, c.spread, c.bass, c.layout), ("pad", 500, "mid", "otama"))
+        self.assertEqual((c.style, c.spread, c.bass, c.layout), ("pad", 500, "mid", "song"))
         v = c.engine_values()
         self.assertEqual((v["release_ms"], v["bass_floor"], v["upper_lo"], v["grace_ms"]), (300, 48, 72, 80))
         self.assertFalse(ChordSettings(glide=True, style="piano").engine_values()["retrigger"])
