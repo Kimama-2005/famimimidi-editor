@@ -58,6 +58,9 @@ class Bridge:
         self._app.disconnect()
         return self._app.state()
 
+    def undo_load(self):
+        return self._app.undo_load()
+
     def toggle_virtual(self):
         r = self._app.toggle_virtual()
         return {**r, "state": self._app.state()}
@@ -132,6 +135,9 @@ class Bridge:
         return self._app.set_wave(samples)
 
     # ---------- 演奏セット ----------
+    def set_master(self, which, value):
+        return self._app.set_master(which, value)
+
     def toggle_link12(self):
         return self._with_side(self._app.toggle_link12())
 

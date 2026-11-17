@@ -495,3 +495,10 @@ svg.env { width: 100%; height: 200px; background: var(--graph); border-radius: 4
 
 /* 🎮 仮想ファミコン(ON のとき) */
 #btnVfc.on { background: var(--accent2); color: var(--panel); border-color: var(--accent2); }
+
+/* 知らせの中のボタン(元に戻す) */
+#toast .toastbtn { margin-left: 10px; }
+
+/* 演奏セットのマスターボリューム */
+.how .master { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.how .master input { width: 140px; }

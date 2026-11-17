@@ -242,6 +242,10 @@ class Performance:
     chord: ChordSettings = field(default_factory=ChordSettings)
     created: str = ""
     updated: str = ""
+    # マスターボリューム(0〜127)。5ch の音量 CC#7 に「× 値 / 127」で掛けて送る(音色の値は変えない)。
+    # 割り当て表で弾くとき(map)とコードで弾くとき(chord)で別々。コードは4つの ch が重なって大きいので初期値は半分
+    master_map: int = 127
+    master_chord: int = 64
 
     def __post_init__(self):
         self.validate()
@@ -324,7 +328,8 @@ class Performance:
         return {"id": self.id, "name": self.name, "notes": self.notes,
                 "slots": {str(ch): self.slots[ch].to_dict() for ch in CHS}, "link12": self.link12,
                 "keyboard": self.keyboard.to_dict(), "controls": self.controls.to_dict(),
-                "chord": self.chord.to_dict(), "created": self.created, "updated": self.updated}
+                "chord": self.chord.to_dict(), "master": {"map": self.master_map, "chord": self.master_chord},
+                "created": self.created, "updated": self.updated}
 
     @classmethod
     def from_dict(cls, d, spec: Spec | None = None):
@@ -333,7 +338,9 @@ class Performance:
         return cls(name=d.get("name", ""), id=d.get("id", ""), notes=d.get("notes", ""), slots=slots,
                    link12=bool(d.get("link12", False)), keyboard=KeyboardMap.from_dict(d.get("keyboard")),
                    controls=Controls.from_dict(d.get("controls")), chord=ChordSettings.from_dict(d.get("chord")),
-                   created=d.get("created", ""), updated=d.get("updated", ""))
+                   created=d.get("created", ""), updated=d.get("updated", ""),
+                   master_map=clamp((d.get("master") or {}).get("map", 127), 0, 127),
+                   master_chord=clamp((d.get("master") or {}).get("chord", 64), 0, 127))
 
     def copy(self):
         return copy.deepcopy(self)

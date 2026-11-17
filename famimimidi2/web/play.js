@@ -52,7 +52,27 @@ function buildMiniKb() {
 }
 
 /** app.js の applyState から呼ばれる */
+/** マスターボリューム(割り当て表で弾くとき・コードで弾くとき、別々)。いまの弾き方のほうを表示・操作する */
+function renderMaster(st) {
+  const m = st.session.master;
+  if (!m) return;
+  const which = st.session.chord_active ? 'chord' : 'map';
+  $('masterLabel').textContent = which === 'chord' ? 'マスターボリューム(コード)' : 'マスターボリューム(割り当て表)';
+  if (document.activeElement !== $('master')) $('master').value = m[which];
+  $('masterNum').textContent = m[which];
+  $('master').dataset.which = which;
+}
+let masterTimer = null;
+window.addEventListener('pywebviewready', () => {
+  $('master').oninput = () => {
+    $('masterNum').textContent = $('master').value;
+    clearTimeout(masterTimer);
+    masterTimer = setTimeout(async () => take(await api.set_master($('master').dataset.which, +$('master').value)), 60);
+  };
+});
+
 window.renderPlay = (st) => {
+  renderMaster(st);
   if (!pl.built) { buildMiniKb(); buildStatic(); pl.built = true; }
   if (pl.drag) return;                    // 帯を動かしている最中は上書きしない
   const s = st.session;

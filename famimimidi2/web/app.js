@@ -9,13 +9,20 @@ let api = null;
 
 // ---------- お知らせ ----------
 let toastTimer = null;
-function toast(msg, kind = '') {
+function toast(msg, kind = '', action = null) {
   const t = $('toast');
   t.textContent = msg;
+  if (action) {                                   // 押せるボタン付き(「元に戻す」など)。長めに出す
+    const b = document.createElement('button');
+    b.className = 'btn mini toastbtn';
+    b.textContent = action.label;
+    b.onclick = () => { t.style.display = 'none'; action.fn(); };
+    t.appendChild(b);
+  }
   t.className = kind;
   t.style.display = 'block';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.style.display = 'none'), kind === 'danger' ? 6000 : 3000);
+  toastTimer = setTimeout(() => (t.style.display = 'none'), action ? 8000 : kind === 'danger' ? 6000 : 3000);
 }
 window.toast = toast;
 
@@ -170,9 +177,9 @@ function renderSide() {
       + (i.sub ? ` <small>${esc(i.sub)}</small>` : '') + '</li>').join('')
     : '<li class="note" style="cursor:default">(まだありません)</li>';
   const btns = isPlay
-    ? [['load', '読み込む'], ['over', '上書き保存'], ['new', '新しく保存'], ['rename', '名前を変える'], ['del', '削除']]
+    ? [['over', '上書き保存'], ['new', '新しく保存'], ['rename', '名前を変える'], ['del', '削除']]   // 演奏セットは名前を押せば切り替わる
     : [['put', 'この ch に入れる'], ['over', '上書き保存'], ['new', '新しく保存'], ['rename', '名前を変える'], ['del', '削除']];
-  $('sideBtns').innerHTML = btns.map(([k, n], i) => `<button class="btn${i === 0 ? ' main' : ''}" data-act="${k}">${n}</button>`).join('');
+  $('sideBtns').innerHTML = btns.map(([k, n], i) => `<button class="btn${i === 0 && !isPlay ? ' main' : ''}" data-act="${k}">${n}</button>`).join('');
   const it = side.items.find((i) => i.id === S.sel);
   let info = side.info;
   if (it) {
@@ -187,9 +194,12 @@ async function sideAction(act) {
   const it = side.items.find((i) => i.id === id);
   const need = () => { if (!it) toast('左の一覧で選んでください'); return !!it; };
   if (act === 'load' && need()) {
-    if (S.state.session.dirty && !(await ask({ title: '読み込みますか?', text: 'いまの演奏セットの変更は保存していません。読み込むと消えます。', ok: '読み込む' }))) return;
-    take(await api.load_performance(id));
-    toast(`「${it.name}」を読み込んで送りました`);
+    if (it.current && !S.state.session.dirty) { renderSide(); return; }   // いま読み込んでいるセット(変更なし)は読み直さない
+    if (S.loading) return;                                                 // 押した直後のもう1回(ダブルクリック)は無視
+    S.loading = true;
+    let r;
+    try { r = take(await api.load_performance(id)); } finally { S.loading = false; }
+    if (r && !r.error) toast(`「${it.name}」を読み込んで送りました`, '', { label: '元に戻す', fn: async () => { take(await api.undo_load()); toast('読み込む前の演奏に戻しました'); } });
   } else if (act === 'put' && need()) {
     take(await api.put_tone(side.place, id));
   } else if (act === 'new') {
@@ -343,8 +353,14 @@ window.addEventListener('pywebviewready', async () => {
   $('themeSeg').onclick = async (e) => { const b = e.target.closest('button'); if (b) take(await api.set_theme(b.dataset.v)); };
   $('kbFollowSeg').onclick = async (e) => { const b = e.target.closest('button'); if (b) take(await api.set_kb_follow(b.dataset.v === '1')); };
   $('offsetSeg').onclick = async (e) => { const b = e.target.closest('button'); if (b) take(await api.set_offset(+b.dataset.v)); };
-  $('sideList').onclick = (e) => { const li = e.target.closest('li[data-id]'); if (li) { S.sel = li.dataset.id; renderSide(); } };
-  $('sideList').ondblclick = (e) => { const li = e.target.closest('li[data-id]'); if (li) { S.sel = li.dataset.id; sideAction(S.side.place === 'play' ? 'load' : 'put'); } };
+  // 演奏セット: 名前を押したらそのまま切り替える(2026-11-17 ユーザー要望)。音色: 押すと選ぶ、ダブルクリックで「この ch に入れる」
+  $('sideList').onclick = (e) => {
+    const li = e.target.closest('li[data-id]');
+    if (!li) return;
+    S.sel = li.dataset.id;
+    if (S.side.place === 'play') sideAction('load'); else renderSide();
+  };
+  $('sideList').ondblclick = (e) => { const li = e.target.closest('li[data-id]'); if (li && S.side.place !== 'play') { S.sel = li.dataset.id; sideAction('put'); } };
   $('sideBtns').onclick = (e) => { const b = e.target.closest('button'); if (b) sideAction(b.dataset.act); };
   $('sideSearch').oninput = renderSide;
   $('logHead').onclick = () => $('logWin').classList.toggle('collapsed');

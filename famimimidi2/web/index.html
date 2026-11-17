@@ -58,6 +58,12 @@
         <span class="note">弾き方</span>
         <span class="seg" id="howSeg"><button data-h="map">🎹 割り当て表で弾く</button><button data-h="chord">🎸 コードで弾く</button></span>
         <span class="keyhelp"><kbd>スペース</kbd> でも切り替え</span>
+        <span class="master">
+          <span class="note" id="masterLabel">マスターボリューム</span>
+          <input type="range" id="master" min="0" max="127" value="127">
+          <span class="num" id="masterNum">127</span>
+          <span class="help" data-tip="この演奏セットの全体の音量。5つの ch の音量に掛けて送ります(音色の値は変えません)。&#10;「割り当て表で弾く」と「コードで弾く」で別々に覚えます(いま選んでいる弾き方のほうが動きます)。コードは4つの ch が重なって大きく聞こえるので、初期値は半分です。&#10;DPCM(ch5 のドラム)には音量が効きません。カートリッジへは書き込みません。">?</span>
+        </span>
       </div>
       <div id="howMap" class="cheditor">
         <div class="win">

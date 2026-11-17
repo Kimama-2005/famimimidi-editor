@@ -16,6 +16,7 @@ from .device import sysex
 from .device import virtual
 from .device.gate import Gate, SendLog, Source
 from .model.store import Store
+from .model.session import Session
 from .model.tone import Tone, clean_params, load_messages
 from .music import tonecards
 from .music.spec import CH_KIND, CHS, KIND_NAMES, load_spec
@@ -80,7 +81,8 @@ class App:
         self.log = SendLog(log_dir)
         for n in self.notes:
             self.log.note(n)
-        self.gate = Gate(self.log, self.spec, is_silent=lambda ch: self.session.is_silent(ch, self.spec))
+        self.gate = Gate(self.log, self.spec,
+                         is_silent=lambda ch: self.session.is_silent(ch, self.spec) or self._master() == 0)
         self.gate.ch_offset = self.prefs.ch_offset
         self.midi = midi if midi is not None else _winmm()
         self.virtual = virtual.VirtualOut(lookup=self._pc_params)   # 仮想ファミコン(このパソコンで鳴らす)
@@ -194,11 +196,37 @@ class App:
         return None
 
     # ================================================================ 送る
+    def _master(self):
+        """いま効いているマスターボリューム(コードで弾いているときはコードの値)"""
+        perf = self.session.performance
+        return perf.master_chord if self.chord.active else perf.master_map
+
+    def _out_value(self, ch, cc, v):
+        """送る値。音量 CC#7 にはマスターボリュームを掛ける(音色の値は変えない)"""
+        return round(v * self._master() / 127) if cc == 7 else v
+
+    def _send_volumes(self):
+        """マスターボリュームが変わった・弾き方が変わった: 5ch の音量を送り直す"""
+        for ch in CHS:
+            self.gate.queue_cc(ch, 7, self._out_value(ch, 7, self.session.performance.tone(ch).value(7, self.spec)))
+
+    def set_master(self, which, value):
+        """演奏セットのマスターボリューム。which = "map"(割り当て表で弾く)/ "chord"(コードで弾く)"""
+        perf = self.session.performance
+        value = max(0, min(127, int(value)))
+        if which == "chord":
+            perf.master_chord = value
+        else:
+            perf.master_map = value
+        self._send_volumes()
+        self._changed()
+        return self.state()
+
     def _queue_tone(self, ch):
         t = self.session.performance.tone(ch)
         over = self.chord.override_values()
         for cc, v in load_messages(t.values(self.spec)):
-            self.gate.queue_cc(ch, cc, over.get((ch, cc), v))
+            self.gate.queue_cc(ch, cc, over.get((ch, cc), self._out_value(ch, cc, v)))
 
     def send_chs(self, chs, source=Source.EDITOR):
         """ch の音色を全部送る(全項目を既定値+params で。CC#121 は使わない)。波形は CC#18 の後に"""
@@ -257,7 +285,10 @@ class App:
         perf = self.session.performance
         if configure:
             self.chord.configure(perf.chord, perf.controls)
+        was = self.chord.active
         self.chord.set_active(perf.chord.active and (self.place == "play" or self.prefs.kb_follow))
+        if was != self.chord.active:
+            self._send_volumes()             # マスターボリュームが割り当て表/コードで入れ替わる
 
     def _chord_state(self, st):
         for fn in list(self.chord_listeners):
@@ -372,22 +403,40 @@ class App:
         return self.state()
 
     def load_performance(self, pid):
-        """ライブラリの演奏セットを読み込む(SPEC 6.3 の順)"""
+        """ライブラリの演奏セットを読み込む(SPEC 6.3 の順)。確認はしない: 読み込む前の作業中の演奏を1つ覚えておき、
+        「元に戻す」(undo_load)で戻せる(2026-11-17 ユーザー要望: 切り替えの確認がじれったい)"""
         perf = self.library.performance(pid)
         if perf is None:
             return {"error": "その演奏セットが見つかりません"}
+        self._before_load = Session.from_dict(self.session.to_dict(), self.spec)
+        self.session.load(perf)                           # 2. 作業中の演奏を置き換える
+        self.log.note(f"演奏セット「{perf.name}」を読み込みます")
+        self._apply_session()
+        st = self.state()
+        st["undo_load"] = True
+        return st
+
+    def undo_load(self):
+        """演奏セットを読み込む前の作業中の演奏に戻す(1回だけ)"""
+        before, self._before_load = getattr(self, "_before_load", None), None
+        if before is None:
+            return {"error": "戻せる演奏はありません"}
+        self.session = before
+        self.log.note("演奏セットを読み込む前の作業中の演奏に戻しました")
+        self._apply_session()
+        return self.state()
+
+    def _apply_session(self):
+        """作業中の演奏を入れ替えたあと、全部を送り直す(SPEC 6.3 の順)"""
         with self._lock:                                  # 1. 鳴っている音を止める
             offs = self.router.release_all()
         for m in offs:
             self.gate.send(m, Source.THRU)
-        self.session.load(perf)                           # 2. 作業中の演奏を置き換える
-        self.log.note(f"演奏セット「{perf.name}」を読み込みます")
         self.send_chs(CHS)                                # 3. 5ch の音色
         self.send_controls()                              # 4. ペダル・レバー
         self._sync_router()                               #    割り当て表
         self._sync_chord(configure=True)                  # 5. コードモード(上書きは音色と同じ間引きの列へ)
         self.save_session_soon()
-        return self.state()
 
     def resend(self):
         self.send_session(Source.RESEND)
@@ -497,7 +546,7 @@ class App:
             perf.set_param(ch, cc, v, self.spec)
             for c in chs:
                 if (c, cc) not in over:          # コードモードの間だけ変えている設定は送らない(6.2-4)
-                    self.gate.queue_cc(c, cc, perf.tone(c).value(cc, self.spec))
+                    self.gate.queue_cc(c, cc, self._out_value(c, cc, perf.tone(c).value(cc, self.spec)))
         self._changed()
         return {"tone": self.tone_state(ch), "state": self.state()}
 
@@ -990,6 +1039,8 @@ class App:
             "place": self.place,
             "session": {"name": perf.name, "id": perf.id, "loaded_from": s.loaded_from, "dirty": s.dirty,
                         "link12": perf.link12, "chord_active": perf.chord.active, "slots": slots,
+                        "master": {"map": perf.master_map, "chord": perf.master_chord, "now": self._master(),
+                                   "using": "chord" if self.chord.active else "map"},
                         "keyboard": perf.keyboard.to_dict(), "controls": perf.controls.to_dict(),
                         "templates": [[k, v] for k, v in TEMPLATES.items()]},
             "keyboard": self.keyboard_view(),
